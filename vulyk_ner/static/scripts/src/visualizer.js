@@ -2908,7 +2908,8 @@ Util.profileStart('before render');
 
             renderDocument();
           } else {
-            dispatcher.post(0, 'renderError:noFileSpecified');
+            // Please, don't show file open dialog
+            // dispatcher.post(0, 'renderError:noFileSpecified');
           }
         }
       };

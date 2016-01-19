@@ -9,4 +9,9 @@ $(function() {
 	var spinner = new Spinner(dispatcher, '#spinner');
 	var logger = new AnnotationLog(dispatcher);
 	dispatcher.post('init');
+
+    $(document.body).on("vulyk.next", function(e, data) {
+    	window._current_doc = data.result.task.data;
+    	dispatcher.post(0, "renderData", [data.result.task.data]);
+    });
 });
