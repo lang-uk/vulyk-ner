@@ -2463,6 +2463,7 @@ var AnnotatorUI = (function($, window, undefined) {
             }
           ],
           create: function(evt) {
+            return;
             var $ok = $('#span_form-ok').wrap('<span id="span_form_lock_bset"/>');
             var $span = $ok.parent();
             var $lock = $('<input id="span_form_lock" type="checkbox"/>').insertBefore($ok);

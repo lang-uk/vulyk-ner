@@ -1,17 +1,98 @@
 $(function() {
-	dispatcher = new Dispatcher();
-	var urlMonitor = new URLMonitor(dispatcher);
-	var ajax = new OfflineAjax(dispatcher);
-	var visualizer = new Visualizer(dispatcher, 'svg');
-	var svg = visualizer.svg;
-	var visualizerUI = new VisualizerUI(dispatcher, svg);
-	var annotatorUI = new AnnotatorUI(dispatcher, svg);
-	var spinner = new Spinner(dispatcher, '#spinner');
-	var logger = new AnnotationLog(dispatcher);
-	dispatcher.post('init');
+    dispatcher = new Dispatcher();
+    var urlMonitor = new URLMonitor(dispatcher);
+    var ajax = new OfflineAjax(dispatcher);
+    var visualizer = new Visualizer(dispatcher, 'svg');
+    var svg = visualizer.svg;
+    var visualizerUI = new VisualizerUI(dispatcher, svg);
+    var annotatorUI = new AnnotatorUI(dispatcher, svg);
+    var spinner = new Spinner(dispatcher, '#spinner');
+    var logger = new AnnotationLog(dispatcher);
+    dispatcher.post('init');
+
+    function set_current_doc(curr_doc) {
+        curr_doc.create_new_entity = function(type_, offset, comment, attr) {
+            // TODO: support for attrs
+
+            var max_id = 0,
+                i, entity, curr_id, new_id;
+
+            for (i = this["entities"].length - 1; i >= 0; i--) {
+                entity = this["entities"][i];
+                curr_id = parseInt(entity[0].slice(1));
+
+                if (curr_id > max_id) {
+                    max_id = curr_id;
+                }
+            }
+            new_id = "T" + (max_id + 1)
+
+            this["entities"].push([
+                new_id,
+                type_,
+                offset
+            ]);
+
+            this.add_comment(new_id, comment)
+        }
+
+        curr_doc.update_entity = function(id, type_, offset, comment, attr) {
+            this.delete_entity(id);
+
+            this["entities"].push([
+                id,
+                type_,
+                offset
+            ]);
+
+            this.add_comment(id, comment)
+        }
+
+        curr_doc.delete_entity = function(id) {
+            var i, entity;
+
+            for (i = this["entities"].length - 1; i >= 0; i--) {
+                entity = this["entities"][i];
+                if (entity[0] == id) {
+                    this["entities"].splice(i, 1)
+                    break;
+                };
+            }
+
+            curr_doc.delete_comment(id);
+        }
+
+        curr_doc.add_comment = function(id, comment) {
+            // First delete it (if any)
+            this.delete_comment(id);
+
+            if (comment) {
+                this["comments"].push([
+                    id, 
+                    "AnnotatorNotes",
+                    comment
+                ]);
+            }
+        }
+
+        curr_doc.delete_comment = function(id) {
+            var i, curr_comment;
+
+            for (i = this["comments"].length - 1; i >= 0; i--) {
+                curr_comment = this["comments"][i];
+
+                if (curr_comment[0] == id) {
+                    this["comments"].splice(i, 1)
+                    break;
+                }
+            }
+        }
+
+        window._current_doc = curr_doc;
+    }
 
     $(document.body).on("vulyk.next", function(e, data) {
-    	window._current_doc = data.result.task.data;
-    	dispatcher.post(0, "renderData", [data.result.task.data]);
+        set_current_doc(data.result.task.data);
+        dispatcher.post(0, "renderData", [data.result.task.data]);
     });
 });

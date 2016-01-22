@@ -1506,28 +1506,6 @@ var VisualizerUI = (function($, window, undefined) {
           }
           return;
         }
-
-        if (code === $.ui.keyCode.TAB) {
-          showFileBrowser();
-          return false;
-        } else if (code == $.ui.keyCode.LEFT) {
-          return moveInFileBrowser(-1);
-        } else if (code === $.ui.keyCode.RIGHT) {
-          return moveInFileBrowser(+1);
-        } else if (evt.shiftKey && code === $.ui.keyCode.UP) {
-          autoPaging(true);
-        } else if (evt.shiftKey && code === $.ui.keyCode.DOWN) {
-          autoPaging(false);
-        } else if ((Util.isMac ? evt.metaKey : evt.ctrlKey) && code == 'F'.charCodeAt(0)) {
-          evt.preventDefault();
-          showSearchForm();
-        } else if (searchActive && (Util.isMac ? evt.metaKey : evt.ctrlKey) && code == 'G'.charCodeAt(0)) {
-          evt.preventDefault();
-          return moveInFileBrowser(+1);
-        } else if (searchActive && (Util.isMac ? evt.metaKey : evt.ctrlKey) && code == 'K'.charCodeAt(0)) {
-          evt.preventDefault();
-          clearSearchResults();
-        }
       };
 
       var moveInFileBrowser = function(dir) {
@@ -2021,7 +1999,6 @@ var VisualizerUI = (function($, window, undefined) {
             var auth_button = $('#auth_button');
             if (response.user) {
               user = response.user;
-              dispatcher.post('messages', [[['Welcome back, user "' + user + '"', 'comment']]]);
               auth_button.val('Logout ' + user);
               dispatcher.post('user', [user]);
               $('.login').show();
