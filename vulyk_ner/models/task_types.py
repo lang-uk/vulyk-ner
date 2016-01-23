@@ -51,4 +51,5 @@ class NERTaggingTaskType(AbstractTaskType):
         'static/styles/jquery-theme/jquery-ui-redmond.css',
         'static/styles/style-vis.css',
         'static/styles/style-ui.css',
+        'static/styles/fixes.css',
     ]

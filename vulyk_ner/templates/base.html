@@ -536,8 +536,7 @@
 <form id="span_form" class="dialog" title="Span">
   <!-- Span dialog annotated text -->
   <fieldset id="span_selected_fset">
-    <legend>Text</legend>
-    <a target="brat_linked" id="span_highlight_link" href="#">Link</a>
+    <legend>Текст</legend>
     <div id="span_selected"></div>
   </fieldset>
   <!-- Span dialog search links -->
@@ -549,7 +548,7 @@
   <fieldset>
     <div id="entity_and_event_wrapper" class="split_wrapper">
       <div id="span_entity_section" class="wrapper_half_left">
-        <div id="entity_label" class="label-like">Entity type</div>
+        <div id="entity_label" class="label-like">Тип сутності</div>
         <div id="entity_types" class="scroll_wrapper_upper">
           <div class="scroller"></div>
         </div>
@@ -557,17 +556,17 @@
              divs they logically belong to prevent scrollers
              overflowing them. -->
         <div id="entity_attribute_label"
-             class="label-like wrapper_lower_label">Entity attributes</div>
+             class="label-like wrapper_lower_label">Атрибути сутності</div>
         <div id="entity_attributes" class="scroll_wrapper_lower">
           <div class="scroller small-buttons"></div>
         </div>
       </div><div id="span_event_section" class="wrapper_half_right">
-        <div id="event_label" class="label-like">Event type</div>
+        <div id="event_label" class="label-like">Тип події</div>
         <div id="event_types" class="scroll_wrapper_upper">
           <div class="scroller"></div>
         </div>
         <div id="event_attribute_label"
-             class="wrapper_lower_label label-like">Event attributes</div>
+             class="wrapper_lower_label label-like">Атрибути події</div>
         <div id="event_attributes" class="scroll_wrapper_lower">
           <div class="scroller small-buttons"></div>
         </div>
@@ -576,7 +575,7 @@
   </fieldset>
   <!-- Span dialog normalization -->
   <fieldset id="norm_fieldset">
-    <legend>Normalization</legend>
+    <legend>Нормализація</legend>
     <div id="norm_container">
       <select id="span_norm_db"></select>
       <a id="span_norm_db_link" target="brat_linked" href="#" title="Search DB"><img src="/static/plugin_vulyk_ner/static/img/Fugue-shadowless-magnifier.png" style="vertical-align: middle"/></a>
@@ -589,28 +588,28 @@
              placeholder="Click here to search"/>
       <a id="span_norm_ref_link" target="brat_linked" href="#" title="See in DB"><img src="/static/plugin_vulyk_ner/static/img/Fugue-shadowless-external.png" style="vertical-align: middle"/></a>
       <input id="clear_norm_button" type="button"
-             value="&#x2715;" title="Clear normalization"/>
+             value="&#x2715;" title="Очистити нормализацію"/>
     </div>
   </fieldset>
   <!-- Span dialog notes -->
   <fieldset>
-    <legend>Notes</legend>
+    <legend>Коментар</legend>
     <div id="span_notes_container">
       <input id="span_notes" class="borderless"/>
       <input id="clear_span_notes_button" type="button"
-             value="&#x2715;" title="Clear notes"/>
+             value="&#x2715;" title="Очистити коментар"/>
     </div>
   </fieldset>
 </form>
 <!-- Rapid mode span dialog -->
 <form id="rapid_span_form" class="dialog" title="Span type">
   <fieldset id="rapid_span_selected_fset">
-    <legend>Text</legend>
+    <legend>Текст</legend>
     <div id="rapid_span_selected"></div>
   </fieldset>
   <div id="rapid_span_types" class="scroll_fset" style="height:250px">
     <fieldset>
-      <legend>Select type</legend>
+      <legend>Обрати тип</legend>
       <div class="scroller" id="rapid_span_types_div">
         <!-- filled dynamically -->
       </div>
