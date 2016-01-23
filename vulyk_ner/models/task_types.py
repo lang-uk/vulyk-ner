@@ -23,14 +23,14 @@ class NERTaggingTaskType(AbstractTaskType):
     redundancy = 3
 
     JS_ASSETS = [
-        'static/scripts/lib/jquery-ui.min.js',
-        'static/scripts/lib/jquery-ui.combobox.js',
-        'static/scripts/lib/jquery.svg.min.js',
-        'static/scripts/lib/jquery.svgdom.min.js',
-        'static/scripts/lib/jquery.ba-bbq.min.js',
-        'static/scripts/lib/jquery.json.min.js',
-        'static/scripts/lib/sprintf.js',
-        'static/scripts/lib/webfont.js',
+        'static/scripts/vendor/jquery-ui.min.js',
+        'static/scripts/vendor/jquery-ui.combobox.js',
+        'static/scripts/vendor/jquery.svg.min.js',
+        'static/scripts/vendor/jquery.svgdom.min.js',
+        'static/scripts/vendor/jquery.ba-bbq.min.js',
+        'static/scripts/vendor/jquery.json.min.js',
+        'static/scripts/vendor/sprintf.js',
+        'static/scripts/vendor/webfont.js',
         # # brat helpers
         'static/scripts/src/configuration.js',
         'static/scripts/src/util.js',
