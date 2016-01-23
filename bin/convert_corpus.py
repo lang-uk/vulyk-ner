@@ -1,159 +1,85 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import sys
 import re
 import json
-
+from codecs import open
+from datetime import datetime
+from copy import deepcopy
 from glob2 import glob
 
-MAPPING = {
-    "noun": "post",
-    "pron": "post",
-    "verb": "post",
-    "adj": "post",
-    "adjp": "post",
-    "adv": "post",
-    "advp": "post",
-    "prep": "post",
-    "predic": "post",
-    "insert": "post",
-    "conj": "post",
-    "part": "post",
-    "excl": "post",
-    "numr": "post",
-    "p": "nmbr",
-    "s": "nmbr",
-    "m": "gndr",
-    "f": "gndr",
-    "n": "gndr",
-    "1": "PErs",
-    "2": "PErs",
-    "3": "PErs",
-    "v_naz": "CAse",
-    "v_rod": "CAse",
-    "v_dav": "CAse",
-    "v_zna": "CAse",
-    "v_oru": "CAse",
-    "v_mis": "CAse",
-    "v_kly": "CAse",
-    "np": "tantum",
-    "ns": "tantum",
-    "rv_naz": "req_case",
-    "rv_rod": "req_case",
-    "rv_dav": "req_case",
-    "rv_zna": "req_case",
-    "rv_oru": "req_case",
-    "rv_mis": "req_case",
-    "futr": "tense",
-    "past": "tense",
-    "pres": "tense",
-    "impr": "mood",
-    "inf": "verb_type",
-    "impers": "verb_type",
-    "actv": "voice",
-    "pasv": "voice",
-    "subord": "conj_type",
-    "coord": "conj_type",
-    "perf": "aspc",
-    "imperf": "aspc",
-    "tran": "trns",
-    "intran": "trns",
-    "compb": "forms",
-    "compr": "forms",
-    "super": "forms",
-    "anim": "ANim",
-    "inanim": "ANim",
-    "nv": "aux",
-    "bad": "aux",
-    "rev": "aux",
-    "rare": "aux",
-    "v-u": "aux",
-    "abbr": "aux",
-    "coll": "aux",
-    "slang": "aux",
-    "unknown": "aux",
-    "pers": "aux",
-    "alt": "aux",
-    "init": "aux",
-    "fname": "aux",
-    "lname": "aux",
-    "patr": "aux",
+TEMPLATE = {
+    "action": "getDocument",
+    "attributes": [],
+    "comments": [],
+    "ctime": 1452432571.0,
+    "mtime": 1452432571.0,
+    "entities": [],
+    "equivs": [],
+    "events": [],
+    "messages": [],
+    "modifications": [],
+    "normalizations": [],
+    "protocol": 1,
+    "relations": [],
+    "sentence_offsets": [
 
-
-    "number": "aux",
-    "dem": "aux",
-    "int": "aux",
-    "rel": "aux",
-    "pos": "aux",
-    "def": "aux",
-    "ind": "aux",
-    "refl": "aux",
-    "neg": "aux",
-    "gen": "aux",
-    "contr": "aux",
-    "time": "aux",
-    "&pron": "aux",
-
-    # Will be removed later
-    "&adj": "aux",
-    "phras": "aux",
-}
-
-BUG_FIXES = {
-    # "&pron": "pron",
-    # "<adv>": "adv",
-    # "</adv>": "adv",
-    # "<insert>": "insert",
-    # "</insert>": "insert",
-    # "<prep": "prep",
-    # "</prep": "prep",
-    # "&adjp": "adjp",
-    # "&adj": "adjp",
-    # "rv_oru>": "rv_oru",
+    ],
+    "source_files": [
+        "ann",
+        "txt"
+    ],
+    "text": "",
+    "token_offsets": [
+    ],
+    "triggers": []
 }
 
 
 def parse_file(content):
     matches = re.findall("<S>(.*)<\/S>", content)
 
-    print("%s: %s" % (f, len(matches)))
+    text = []
+    words = []
+    sentences = []
+
+    token_begin = 0
+    sentence_begin = 0
+    res = deepcopy(TEMPLATE)
 
     for m in matches:
-        sentence = []
         word_forms = re.findall("([^[]*)\[([^]]*)\]", m)
 
-        for word, tags_raw in word_forms:
-            tag_options = []
-            if "/punct" not in tags_raw:
-                tags = re.findall("([^/]+)\/([^,]+),*", tags_raw)
-                for tag in tags:
-                    tag_details = filter(
-                        lambda x: x not in ["punct", "null", ""],
-                        tag[1].split(":"))
+        for word, _ in word_forms:
+            word = word.strip()
 
-                    try:
-                        tag_details = map(
-                            lambda x: [BUG_FIXES.get(x, x),
-                                       MAPPING[BUG_FIXES.get(x, x)]],
-                            tag_details)
-                    except KeyError:
-                        print("%s: %s" % (word, tag_details))
+            text.append(word)
+            token_end = len(" ".join(text))
 
-                    tag_options.append([tag[0], tag_details])
+            words.append([token_begin, token_end])
+            token_begin = token_end + 1
 
-                sentence.append([word.strip(), tag_options])
-            else:
-                sentence.append([word.strip(), False])
+        sentence_end = len(" ".join(text))
+        if sentence_end > sentence_begin:
+            sentences.append([sentence_begin, sentence_end])
+            sentence_begin = sentence_end + 1
 
-        if sentence:
-            yield {"sentence": sentence}
+    res["text"] = " ".join(text)
+    res["token_offsets"] = words
+    res["sentence_offsets"] = sentences
+    res["ctime"] = float(datetime.now().strftime("%s"))
+    res["mtime"] = float(datetime.now().strftime("%s"))
+
+    return res
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         exit("Not enough arguments")
 
-    with open(sys.argv[2], "w") as f_out:
+    with open(sys.argv[2], "w", encoding="utf-8") as f_out:
         for f in glob(sys.argv[1]):
-            with open(f, "r") as fp:
-                for sentence in parse_file(fp.read()):
-                    f_out.write(json.dumps(sentence, ensure_ascii=False)
-                                + "\n")
+            with open(f, "r", encoding="utf-8") as fp:
+                f_out.write(
+                    json.dumps(parse_file(fp.read()), ensure_ascii=False) +
+                    "\n")

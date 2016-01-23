@@ -94,5 +94,9 @@ $(function() {
     $(document.body).on("vulyk.next", function(e, data) {
         set_current_doc(data.result.task.data);
         dispatcher.post(0, "renderData", [data.result.task.data]);
+    }).on("vulyk.save", function(e, callback) {
+        callback(window._current_doc);
+    }).on("vulyk.skip", function(e, callback) {
+        callback();
     });
 });
