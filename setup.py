@@ -24,7 +24,7 @@ test_requirements = requirements
 setup(
     name='vulyk_ner',
     version='0.1.0',
-    description="Vulyk NER tagging plugin",
+    description="Vulyk NER tagging plugin. Based on works of Brat Rapid Annotation Tool ((c) 2010-2012 The brat contributors)",
     long_description=readme + '\n\n' + history,
     author="Dmitry Chaplinsky",
     author_email='chaplinsky.dmitry@gmail.com',

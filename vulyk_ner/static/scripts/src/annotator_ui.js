@@ -2317,7 +2317,7 @@ var AnnotatorUI = (function($, window, undefined) {
       var rapidSpanForm = $('#rapid_span_form');
     
       var deleteSpan = function() {
-        if (Configuration.confirmModeOn && !confirm("Are you sure you want to delete this annotation?")) {
+        if (Configuration.confirmModeOn && !confirm("Чи ви впевнені що бажаєте видалити цю анотацію?")) {
           return;
         }
         $.extend(spanOptions, {
@@ -2438,27 +2438,27 @@ var AnnotatorUI = (function($, window, undefined) {
           width: 760,
           buttons: [{
               id: 'span_form_add_fragment',
-              text: "Add Frag.",
+              text: "Додати фрагмент",
               click: addFragment
             }, {
               id: 'span_form_delete',
-              text: "Delete",
+              text: "Видалити",
               click: deleteSpan
             }, {
               id: 'span_form_delete_fragment',
-              text: "Delete Frag.",
+              text: "Видалити фрагмент",
               click: deleteFragment
             }, {
               id: 'span_form_reselect',
-              text: 'Move',
+              text: 'Перемістити',
               click: reselectSpan
             }, {
               id: 'span_form_reselect_fragment',
-              text: 'Move Frag.',
+              text: 'Перемістити фрагмент',
               click: reselectFragment
             }, {
               id: 'span_form_split',
-              text: 'Split',
+              text: 'Розділити',
               click: splitSpan
             }
           ],

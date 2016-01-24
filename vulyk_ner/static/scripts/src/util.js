@@ -607,9 +607,9 @@ var Util = (function(window, undefined) {
       fontNotifyList = [dispatcher];
 
       webFontURLs = webFontURLs || [
-        'static/fonts/Astloch-Bold.ttf',
-        'static/fonts/PT_Sans-Caption-Web-Regular.ttf',
-        'static/fonts/Liberation_Sans-Regular.ttf'
+        '/static/plugin_vulyk_ner/static/fonts/Astloch-Bold.ttf',
+        '/static/plugin_vulyk_ner/static/fonts/PT_Sans-Caption-Web-Regular.ttf',
+        '/static/plugin_vulyk_ner/static/fonts/Liberation_Sans-Regular.ttf'
       ];
 
       var families = [];

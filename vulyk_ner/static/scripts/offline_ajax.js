@@ -20,7 +20,6 @@ var OfflineAjax = (function($, window, undefined) {
                 dispatcher.post('spin');
 
                 var url;
-                console.log(data.action);
                 switch (data.action) {
                     case 'getDocument':
                         dispatcher.post('unspin');
@@ -112,96 +111,6 @@ var OfflineAjax = (function($, window, undefined) {
                                                 "c",
                                                 null,
                                                 ".."
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-123",
-                                                1396452023.0,
-                                                32,
-                                                0,
-                                                0
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-46",
-                                                1452371908.0,
-                                                28,
-                                                0,
-                                                0
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-251",
-                                                1354046512.0,
-                                                21,
-                                                0,
-                                                0
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-118",
-                                                1409691113.0,
-                                                23,
-                                                0,
-                                                0
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-75",
-                                                1452432571.0,
-                                                10,
-                                                0,
-                                                0
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-181",
-                                                1352355357.0,
-                                                97,
-                                                0,
-                                                0
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-134",
-                                                1399495899.0,
-                                                16,
-                                                0,
-                                                0
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-236",
-                                                1359766765.0,
-                                                23,
-                                                0,
-                                                0
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-27",
-                                                1452371778.0,
-                                                23,
-                                                0,
-                                                0
-                                        ],
-                                        [
-                                                "d",
-                                                null,
-                                                "ned.train-doc-184",
-                                                1352355357.0,
-                                                29,
-                                                0,
-                                                0
                                         ]
                                 ],
                                 "messages": [],
@@ -240,23 +149,56 @@ var OfflineAjax = (function($, window, undefined) {
                         return;
 
                     case 'createSpan':
-                        // url = '/ned.train-doc-118.data_edit.js'
-                        // break
-                        // window._current_doc
-                        console.log(data);
-                        window._current_doc.entities.push(
-                            ["T12", data["type"], JSON.parse(data.offsets)]
-                        );
+                        data.offsets = JSON.parse(data.offsets)
+                        data.attributes = JSON.parse(data.attributes)
+                        if (typeof(data.id) !== "undefined") {
+                            window._current_doc.update_entity(
+                                data.id,
+                                data.type,
+                                data.offsets,
+                                data.comment,
+                                data.attributes
+                            );
+                        } else {
+                            window._current_doc.create_new_entity(
+                                data.type,
+                                data.offsets,
+                                data.comment,
+                                data.attributes
+                            );
+                        }
 
                         dispatcher.post(0, callback, [
                                 {
                                     "edited": [
-                                            ["T16"]
+                                        // TODO: add something
                                     ],
                                     "protocol": 1,
                                     "messages": [],
-                                    "undo": "{\"action\": \"add_tb\", \"attributes\": \"{}\", \"normalizations\": \"[]\", \"id\": \"T16\"}",
+                                    "undo": "{}",  // TODO: add something
                                     "action": "createSpan",
+                                    "annotations": window._current_doc
+                                }
+                        ]);
+                        dispatcher.post('unspin');
+                        return;
+
+                    case 'deleteSpan':
+                        if (typeof(data.id) !== "undefined") {
+                            window._current_doc.delete_entity(
+                                data.id
+                            );
+                        }
+
+                        dispatcher.post(0, callback, [
+                                {
+                                    "edited": [
+                                        // TODO: add something
+                                    ],
+                                    "protocol": 1,
+                                    "messages": [],
+                                    "undo": "{}",  // TODO: add something
+                                    "action": "deleteSpan",
                                     "annotations": window._current_doc
                                 }
                         ]);
@@ -292,9 +234,6 @@ var OfflineAjax = (function($, window, undefined) {
                     jsonp.messages = [];
                     if (merge) {
                         $.extend(jsonp, merge);
-                    }
-                    if (data.action == "getDocument") {
-                        window._current_doc = jsonp;
                     }
 
                     dispatcher.post(0, callback, [jsonp]);
