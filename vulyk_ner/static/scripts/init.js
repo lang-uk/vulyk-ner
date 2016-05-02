@@ -89,6 +89,18 @@ $(function() {
         }
 
         window._current_doc = curr_doc;
+        var words_count = $.grep(window._current_doc["token_offsets"], function(el, i){
+            if ((el[1] - el[0]) > 1) {
+                return true;
+            }
+            if (/[а-яА-ЯєіїЄЇІ]/.test(window._current_doc["text"].slice(el[0], el[1]))) {
+                return true;
+            } else {
+                return false;
+            }
+        }).length;
+
+        $(".stats-brat strong").html(words_count);
     }
 
     $(document.body).on("vulyk.next", function(e, data) {
@@ -98,5 +110,14 @@ $(function() {
         callback(window._current_doc);
     }).on("vulyk.skip", function(e, callback) {
         callback();
+    }).on("vulyk.task_error", function(e, data) {
+        $.magnificPopup.open({
+            items: {
+                src: '<div class="zoom-anim-dialog small-dialog">' +
+                '<div class="dialog-content">Нажаль, увесь пакет завдань був виконаний, але дуже скоро ми додамо нові.</div>' +
+                '</div>',
+                type: 'inline'
+            }
+        })
     });
 });

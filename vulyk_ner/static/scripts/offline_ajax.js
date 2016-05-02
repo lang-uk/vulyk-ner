@@ -35,18 +35,6 @@ var OfflineAjax = (function($, window, undefined) {
                                 "entity_types": [
                                         {
                                                 "attributes": [],
-                                                "bgColor": "#8fb2ff",
-                                                "borderColor": "darken",
-                                                "children": [],
-                                                "fgColor": "black",
-                                                "labels": null,
-                                                "name": "ОРГ",
-                                                "normalizations": [],
-                                                "type": "ОРГ",
-                                                "unused": false
-                                        },
-                                        {
-                                                "attributes": [],
                                                 "bgColor": "#ffccaa",
                                                 "borderColor": "darken",
                                                 "children": [],
@@ -55,6 +43,18 @@ var OfflineAjax = (function($, window, undefined) {
                                                 "name": "ПЕРС",
                                                 "normalizations": [],
                                                 "type": "ПЕРС",
+                                                "unused": false
+                                        },
+                                        {
+                                                "attributes": [],
+                                                "bgColor": "#8fb2ff",
+                                                "borderColor": "darken",
+                                                "children": [],
+                                                "fgColor": "black",
+                                                "labels": null,
+                                                "name": "ОРГ",
+                                                "normalizations": [],
+                                                "type": "ОРГ",
                                                 "unused": false
                                         },
                                         {
@@ -76,9 +76,9 @@ var OfflineAjax = (function($, window, undefined) {
                                                 "children": [],
                                                 "fgColor": "black",
                                                 "labels": null,
-                                                "name": "РАЗН",
+                                                "name": "РІЗН",
                                                 "normalizations": [],
-                                                "type": "РАЗН",
+                                                "type": "РІЗН",
                                                 "unused": false
                                         }
                                 ],

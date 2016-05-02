@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 import sys
 import re
+import os
 import json
 from codecs import open
 from datetime import datetime
@@ -36,7 +37,7 @@ TEMPLATE = {
 }
 
 
-def parse_file(content):
+def parse_file(fname, content):
     matches = re.findall("<S>(.*)<\/S>", content)
 
     text = []
@@ -50,23 +51,33 @@ def parse_file(content):
     for m in matches:
         word_forms = re.findall("([^[]*)\[([^]]*)\]", m)
 
+        sentence_begin = len("".join(text))
         for word, _ in word_forms:
+            leading_space = len(word) - len(word.lstrip(" "))
+            trailing_space = len(word) - len(word.rstrip(" "))
             word = word.strip()
 
+            text.append(" " * leading_space)
+
+            token_begin = len("".join(text))
             text.append(word)
-            token_end = len(" ".join(text))
+            token_end = len("".join(text))
 
-            words.append([token_begin, token_end])
-            token_begin = token_end + 1
+            text.append(" " * trailing_space)
 
-        sentence_end = len(" ".join(text))
+            if token_end > token_begin:
+                words.append([token_begin, token_end])
+
+        text.append(". ")
+        sentence_end = len("".join(text))
         if sentence_end > sentence_begin:
             sentences.append([sentence_begin, sentence_end])
-            sentence_begin = sentence_end + 1
 
-    res["text"] = " ".join(text)
+    res["text"] = "".join(text)
+    res["file_id"] = fname
     res["token_offsets"] = words
     res["sentence_offsets"] = sentences
+
     res["ctime"] = float(datetime.now().strftime("%s"))
     res["mtime"] = float(datetime.now().strftime("%s"))
 
@@ -81,5 +92,7 @@ if __name__ == '__main__':
         for f in glob(sys.argv[1]):
             with open(f, "r", encoding="utf-8") as fp:
                 f_out.write(
-                    json.dumps(parse_file(fp.read()), ensure_ascii=False) +
+                    json.dumps(
+                        parse_file(os.path.basename(f), fp.read()),
+                        ensure_ascii=False) +
                     "\n")
