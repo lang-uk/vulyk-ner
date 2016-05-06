@@ -44,6 +44,7 @@ def parse_file(fname, content):
     words = []
     sentences = []
 
+    word_count = 0
     token_begin = 0
     sentence_begin = 0
     res = deepcopy(TEMPLATE)
@@ -61,6 +62,8 @@ def parse_file(fname, content):
 
             token_begin = len("".join(text))
             text.append(word)
+            if word and re.search(u"[а-яА-ЯєіїЄЇІ]", word) is not None:
+                word_count += 1
             token_end = len("".join(text))
 
             text.append(" " * trailing_space)
@@ -68,7 +71,7 @@ def parse_file(fname, content):
             if token_end > token_begin:
                 words.append([token_begin, token_end])
 
-        text.append(". ")
+        # text.append(". ")
         sentence_end = len("".join(text))
         if sentence_end > sentence_begin:
             sentences.append([sentence_begin, sentence_end])
@@ -81,6 +84,7 @@ def parse_file(fname, content):
     res["ctime"] = float(datetime.now().strftime("%s"))
     res["mtime"] = float(datetime.now().strftime("%s"))
 
+    print("%s:%s" % (fname, word_count))
     return res
 
 

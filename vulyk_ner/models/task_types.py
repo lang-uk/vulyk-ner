@@ -20,7 +20,7 @@ class NERTaggingTaskType(AbstractTaskType):
     helptext_template = 'help.html'
     type_name = 'ner_tagging_task'
 
-    redundancy = 3
+    redundancy = 2
 
     JS_ASSETS = [
         'static/scripts/vendor/jquery-ui.min.js',
