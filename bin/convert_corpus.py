@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import sys
-import re
-import os
-import json
 from codecs import open
-from datetime import datetime
 from copy import deepcopy
+from datetime import datetime
+import json
+import os
+import re
+import sys
+
 from glob2 import glob
 
 TEMPLATE = {
