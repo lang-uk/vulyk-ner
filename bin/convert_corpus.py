@@ -72,7 +72,7 @@ def parse_file(fname, content):
             if token_end > token_begin:
                 words.append([token_begin, token_end])
 
-        # text.append(". ")
+        text.append("\n")
         sentence_end = len("".join(text))
         if sentence_end > sentence_begin:
             sentences.append([sentence_begin, sentence_end])
