@@ -63,3 +63,5 @@ target/
 _static/
 tasks/
 done/
+.idea
+.ipynb_checkpoints
