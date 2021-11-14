@@ -22,6 +22,11 @@ python3 -m unittest discover -s test
 ### Preprocess plain text and format it into Vulyk JSON
 This will tokenize text, perform NER search and output results into Vulyk compatible json format.
 
+Required dependencies
+```shell
+pip3 install stanza
+```
+
 ```shell
 cat file.txt | python3 convert2vulyk.py > save_to_file.json
 ```
