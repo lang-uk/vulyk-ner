@@ -21,12 +21,14 @@ def parse_bsf(bsf_data: str) -> list:
     :param bsf_data: data in the format 'T9	PERS 778 783    токен'. Can be multiple lines.
     :return: list of named tuples for each line of the data representing a single named entity token
     """
-    if len(bsf_data.strip()) == 0:
+    data = bsf_data.strip()
+    if not data:
         return []
-
+    #                     Token_id Entity start  end    text within range
+    #                        \/      \/     \/    \/      \/
     ln_ptrn = re.compile(r'(T\d+)\s(\w+)\s(\d+)\s(\d+)\s(.+?)(?=T\d+\s\w+\s\d+\s\d+|$)', flags=re.DOTALL)
     result = []
-    for m in ln_ptrn.finditer(bsf_data.strip()):
+    for m in ln_ptrn.finditer(data):
         bsf = BsfInfo(m.group(1), m.group(2), int(m.group(3)), int(m.group(4)), m.group(5).strip())
         result.append(bsf)
     return result
@@ -47,7 +49,7 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
     t_idx = 0
     s_offsets = []
     t_offsets = []
-    if len(text) > 0:
+    if text:
         for s in text.split('\n'):
             s_offsets.append([idx, idx + len(s)])
             for t in s.strip().split(' '):
