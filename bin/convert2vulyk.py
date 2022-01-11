@@ -18,9 +18,10 @@ def parse_bsf(bsf_data: str) -> list:
     """
     Convert multiline textual bsf representation to a list of named entities.
 
-    :param bsf_data: data in the format 'T9	PERS 778 783    токен'. Can be multiple lines.
+    :param bsf_data: data in the format 'T9 PERS 778 783    токен'. Can be multiple lines.
     :return: list of named tuples for each line of the data representing a single named entity token
     """
+
     data = bsf_data.strip()
     if not data:
         return []
@@ -42,8 +43,16 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
     :param bsf_markup: named entities in Brat standoff format
     :return: dict that can be directly converted to Vulyk json file
     """
+
+    tags_mapping = {
+        "PERS": "ПЕРС",
+        "ORG": "ОРГ",
+        "LOC": "ЛОК",
+        "MISC": "РІЗН"
+    }
+
     bsf = parse_bsf(bsf_markup)
-    ents = [[e.id, e.tag, [[e.start_idx, e.end_idx]]] for e in bsf]
+    ents = [[e.id, tags_mapping.get(e.tag, e.tag), [[e.start_idx, e.end_idx]]] for e in bsf]
 
     idx = 0
     t_idx = 0
@@ -133,6 +142,8 @@ if __name__ == "__main__":
                              '*.ann for lang-uk data set')
     parser.add_argument('--brat_annotation', type=argparse.FileType('r'), default=None,
                         help='Path to file with Brat standoff markup')
+    parser.add_argument('--drop_annotations', default=False, action="store_true",
+                        help='Do not write annotations (or skip ner tagging) to the output')
     parser.add_argument('-v', action='store_true', help='Print more logs (info)')
     parser.add_argument('-vv', action='store_true', help='Print even more logs (debug)')
 
@@ -152,6 +163,9 @@ if __name__ == "__main__":
         log.info(f"No markup file is provided. Assuming a raw text as input.")
 
     text_data = args.text_file.read()
+
+    if args.drop_annotations:
+        brat_markup = ""
 
     vulyk_json = text_2_vulyk(text_data, brat_markup)
     print(vulyk_json)
