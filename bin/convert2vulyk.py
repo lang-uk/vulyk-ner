@@ -142,67 +142,6 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
     return vulyk
 
 
-def text_2_vulyk(text: str, bsf_markup: str = None) -> str:
-    """
-    Convert text string with annotations to json string for Vulyk annotation tool.
-    If annotations are provided in bsf_markup then text must be tokenized. Otherwise a raw text string can be supplied.
-    :param text: tokenzied OR raw text string
-    :param bsf_markup: string containing annotations in brat standoff format
-    :return: json string compatible with Vulyk (Brat annotation tool)
-    """
-    txt = text
-    markup = bsf_markup
-    if bsf_markup is None:
-        log.info(
-            "No markup file => processing text with Stanza to extract Named Entities."
-        )
-        # run tokenization and NER
-        from tokenize_uk import tokenize_text
-
-        token_list = tokenize_text(text)
-        # we have list<paragraphs> of list<sentences> of list<tokens>
-        paragraph = ["\n".join([" ".join(t) for t in sent]) for sent in token_list]
-        txt = "\n".join(
-            paragraph
-        )  # stanza bug does not allow for double new line symbol right now
-        log.debug(txt)
-
-        markup = _run_ner(txt)
-        log.debug(markup)
-
-    vulyk_obj = convert_bsf_2_vulyk(txt, markup)
-
-    return json.dumps(vulyk_obj, ensure_ascii=False)
-
-
-def _run_ner(txt: str) -> str:
-    """
-    Run ner pipeline on tokenized text using Stanza.
-    :param txt: tokenized text string
-    :return: string with annotations in brat standoff format
-    """
-    import stanza
-
-    logging.getLogger("stanza").setLevel(log.level)
-
-    stanza.download("uk")
-
-    ner = stanza.Pipeline(
-        lang="uk", processors="tokenize,mwt,ner", tokenize_pretokenized="true"
-    )
-    log.info("Processing text. It may take few seconds...")
-    doc = ner(txt)
-
-    tok_i = 1
-    brat_str = ""
-    for tok_i, ent in enumerate(doc.ents):
-        brat_str += (
-            f"T{tok_i + 1}\t{ent.type} {ent.start_char} {ent.end_char}\t{ent.text}\n"
-        )
-
-    return brat_str
-
-
 def convert(args):
     for text in map(pathlib.Path, glob.glob(args.text_files)):
         log.info(f"Found text file {text}, parsing it")
@@ -327,6 +266,3 @@ if __name__ == "__main__":
         args.func(args)
     else:
         parser.print_usage()
-
-    # vulyk_json = text_2_vulyk(text_data, brat_markup)
-    # print(vulyk_json)
