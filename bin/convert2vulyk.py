@@ -23,9 +23,7 @@ class StanzaNER:
         logging.getLogger("stanza").setLevel(log.level)
         stanza.download(model)
 
-        self.ner = stanza.Pipeline(
-            lang=model, processors="tokenize,mwt,ner", tokenize_pretokenized="true"
-        )
+        self.ner = stanza.Pipeline(lang=model, processors="tokenize,mwt,ner", tokenize_pretokenized="true")
 
     def tag_text(self, txt):
         doc = self.ner(txt)
@@ -34,9 +32,7 @@ class StanzaNER:
         brat_str = ""
 
         for tok_i, ent in enumerate(doc.ents):
-            brat_str += (
-                f"T{tok_i + 1}\t{ent.type} {ent.start_char} {ent.end_char}\t{ent.text}\n"
-            )
+            brat_str += f"T{tok_i + 1}\t{ent.type} {ent.start_char} {ent.end_char}\t{ent.text}\n"
 
         return brat_str
 
@@ -54,11 +50,10 @@ class SpacyNER:
 
         if doc.ents:
             for tok_i, ent in enumerate(doc.ents):
-                brat_str += (
-                    f"T{tok_i + 1}\t{ent.label_} {ent.start_char} {ent.end_char}\t{ent.text}\n"
-                )
+                brat_str += f"T{tok_i + 1}\t{ent.label_} {ent.start_char} {ent.end_char}\t{ent.text}\n"
 
         return brat_str
+
 
 def parse_bsf(bsf_data: str) -> list:
     """
@@ -73,14 +68,10 @@ def parse_bsf(bsf_data: str) -> list:
         return []
     #                     Token_id Entity start  end    text within range
     #                        \/      \/     \/    \/      \/
-    ln_ptrn = re.compile(
-        r"(T\d+)\s(\w+)\s(\d+)\s(\d+)\s(.+?)(?=T\d+\s\w+\s\d+\s\d+|$)", flags=re.DOTALL
-    )
+    ln_ptrn = re.compile(r"(T\d+)\s(\w+)\s(\d+)\s(\d+)\s(.+?)(?=T\d+\s\w+\s\d+\s\d+|$)", flags=re.DOTALL)
     result = []
     for m in ln_ptrn.finditer(data):
-        bsf = BsfInfo(
-            m.group(1), m.group(2), int(m.group(3)), int(m.group(4)), m.group(5).strip()
-        )
+        bsf = BsfInfo(m.group(1), m.group(2), int(m.group(3)), int(m.group(4)), m.group(5).strip())
         result.append(bsf)
     return result
 
@@ -97,9 +88,7 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
     tags_mapping = {"PERS": "ПЕРС", "ORG": "ОРГ", "LOC": "ЛОК", "MISC": "РІЗН"}
 
     bsf = parse_bsf(bsf_markup)
-    ents = [
-        [e.id, tags_mapping.get(e.tag, e.tag), [[e.start_idx, e.end_idx]]] for e in bsf
-    ]
+    ents = [[e.id, tags_mapping.get(e.tag, e.tag), [[e.start_idx, e.end_idx]]] for e in bsf]
 
     idx = 0
     t_idx = 0
@@ -154,12 +143,11 @@ def convert(args):
             else:
                 ann = text.with_suffix(".ann")
 
-
             if not ann.exists():
                 log.warning(f"Cannot find annotation file {ann} alongside to text file {text}, skipping")
             else:
                 markup = ann.read_text()
-        
+
         vulyk_obj = convert_bsf_2_vulyk(text.read_text(), markup)
         print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
 
@@ -177,9 +165,7 @@ def tag(args):
 
         # we have list<paragraphs> of list<sentences> of list<tokens>
         paragraph = ["\n".join([" ".join(t) for t in sent]) for sent in token_list]
-        txt = "\n".join(
-            paragraph
-        )  # stanza bug does not allow for double new line symbol right now
+        txt = "\n".join(paragraph)  # stanza bug does not allow for double new line symbol right now
 
         markup = model.tag_text(txt)
 
@@ -231,15 +217,17 @@ if __name__ == "__main__":
     )
 
     convert_parser.set_defaults(func=convert)
-    convert_parser.add_argument('--ann_autodiscovery', default="replace", choices=("append", "replace"),
-                                help='How to find *.ann files: by appending or replacing the extension')
-    convert_parser.add_argument('--ignore_annotations', default=False, action="store_true",
-                            help='Do not try to load *.ann files')
-
-
-    tag_parser = subparsers.add_parser(
-        "tag", help="Tag given files using one of frameworks/models specified in params"
+    convert_parser.add_argument(
+        "--ann_autodiscovery",
+        default="replace",
+        choices=("append", "replace"),
+        help="How to find *.ann files: by appending or replacing the extension",
     )
+    convert_parser.add_argument(
+        "--ignore_annotations", default=False, action="store_true", help="Do not try to load *.ann files"
+    )
+
+    tag_parser = subparsers.add_parser("tag", help="Tag given files using one of frameworks/models specified in params")
 
     tag_parser.add_argument(
         "--ner_framework",
