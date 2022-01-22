@@ -6,13 +6,59 @@ import logging
 import re
 import sys
 import time
+import glob
+import pathlib
+from tokenize_uk import tokenize_text
 from collections import namedtuple
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.ERROR)
 
-BsfInfo = namedtuple('BsfInfo', 'id, tag, start_idx, end_idx, token')
+BsfInfo = namedtuple("BsfInfo", "id, tag, start_idx, end_idx, token")
 
+
+class StanzaNER:
+    def __init__(self, model):
+        import stanza
+
+        logging.getLogger("stanza").setLevel(log.level)
+        stanza.download(model)
+
+        self.ner = stanza.Pipeline(
+            lang=model, processors="tokenize,mwt,ner", tokenize_pretokenized="true"
+        )
+
+    def tag_text(self, txt):
+        doc = self.ner(txt)
+
+        tok_i = 1
+        brat_str = ""
+
+        for tok_i, ent in enumerate(doc.ents):
+            brat_str += (
+                f"T{tok_i + 1}\t{ent.type} {ent.start_char} {ent.end_char}\t{ent.text}\n"
+            )
+
+        return brat_str
+
+
+class SpacyNER:
+    def __init__(self, model):
+        import spacy
+
+        self.ner = spacy.load(model)
+
+    def tag_text(self, txt):
+        doc = self.ner(txt)
+
+        brat_str = ""
+
+        if doc.ents:
+            for tok_i, ent in enumerate(doc.ents):
+                brat_str += (
+                    f"T{tok_i + 1}\t{ent.label_} {ent.start_char} {ent.end_char}\t{ent.text}\n"
+                )
+
+        return brat_str
 
 def parse_bsf(bsf_data: str) -> list:
     """
@@ -27,10 +73,14 @@ def parse_bsf(bsf_data: str) -> list:
         return []
     #                     Token_id Entity start  end    text within range
     #                        \/      \/     \/    \/      \/
-    ln_ptrn = re.compile(r'(T\d+)\s(\w+)\s(\d+)\s(\d+)\s(.+?)(?=T\d+\s\w+\s\d+\s\d+|$)', flags=re.DOTALL)
+    ln_ptrn = re.compile(
+        r"(T\d+)\s(\w+)\s(\d+)\s(\d+)\s(.+?)(?=T\d+\s\w+\s\d+\s\d+|$)", flags=re.DOTALL
+    )
     result = []
     for m in ln_ptrn.finditer(data):
-        bsf = BsfInfo(m.group(1), m.group(2), int(m.group(3)), int(m.group(4)), m.group(5).strip())
+        bsf = BsfInfo(
+            m.group(1), m.group(2), int(m.group(3)), int(m.group(4)), m.group(5).strip()
+        )
         result.append(bsf)
     return result
 
@@ -44,24 +94,21 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
     :return: dict that can be directly converted to Vulyk json file
     """
 
-    tags_mapping = {
-        "PERS": "ПЕРС",
-        "ORG": "ОРГ",
-        "LOC": "ЛОК",
-        "MISC": "РІЗН"
-    }
+    tags_mapping = {"PERS": "ПЕРС", "ORG": "ОРГ", "LOC": "ЛОК", "MISC": "РІЗН"}
 
     bsf = parse_bsf(bsf_markup)
-    ents = [[e.id, tags_mapping.get(e.tag, e.tag), [[e.start_idx, e.end_idx]]] for e in bsf]
+    ents = [
+        [e.id, tags_mapping.get(e.tag, e.tag), [[e.start_idx, e.end_idx]]] for e in bsf
+    ]
 
     idx = 0
     t_idx = 0
     s_offsets = []
     t_offsets = []
     if text:
-        for s in text.split('\n'):
+        for s in text.split("\n"):
             s_offsets.append([idx, idx + len(s)])
-            for t in s.strip().split(' '):
+            for t in s.strip().split(" "):
                 t_offsets.append([t_idx, t_idx + len(t)])
                 t_idx += len(t) + 1
 
@@ -69,10 +116,28 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
             t_idx = idx
 
     ts = int(time.time())
-    vulyk = {"modifications": [], "equivs": [], "protocol": 1, "ctime": ts, "triggers": [], "text": text,
-              "source_files": ["ann", "txt"], "messages": [], "sentence_offsets": s_offsets, "comments": [],
-              "entities": ents, "mtime": ts, "relations": [], "token_offsets": t_offsets, "action": "getDocument",
-              "normalizations": [], "attributes": [], "events": [], "document": "", "collection": "/"}
+    vulyk = {
+        "modifications": [],
+        "equivs": [],
+        "protocol": 1,
+        "ctime": ts,
+        "triggers": [],
+        "text": text,
+        "source_files": ["ann", "txt"],
+        "messages": [],
+        "sentence_offsets": s_offsets,
+        "comments": [],
+        "entities": ents,
+        "mtime": ts,
+        "relations": [],
+        "token_offsets": t_offsets,
+        "action": "getDocument",
+        "normalizations": [],
+        "attributes": [],
+        "events": [],
+        "document": "",
+        "collection": "/",
+    }
 
     return vulyk
 
@@ -88,13 +153,18 @@ def text_2_vulyk(text: str, bsf_markup: str = None) -> str:
     txt = text
     markup = bsf_markup
     if bsf_markup is None:
-        log.info("No markup file => processing text with Stanza to extract Named Entities.")
+        log.info(
+            "No markup file => processing text with Stanza to extract Named Entities."
+        )
         # run tokenization and NER
         from tokenize_uk import tokenize_text
+
         token_list = tokenize_text(text)
         # we have list<paragraphs> of list<sentences> of list<tokens>
-        paragraph = ['\n'.join([' '.join(t) for t in sent]) for sent in token_list]
-        txt = '\n'.join(paragraph)  # stanza bug does not allow for double new line symbol right now
+        paragraph = ["\n".join([" ".join(t) for t in sent]) for sent in token_list]
+        txt = "\n".join(
+            paragraph
+        )  # stanza bug does not allow for double new line symbol right now
         log.debug(txt)
 
         markup = _run_ner(txt)
@@ -112,60 +182,151 @@ def _run_ner(txt: str) -> str:
     :return: string with annotations in brat standoff format
     """
     import stanza
+
     logging.getLogger("stanza").setLevel(log.level)
 
-    stanza.download('uk')
+    stanza.download("uk")
 
-    ner = stanza.Pipeline(lang='uk', processors='tokenize,mwt,ner', tokenize_pretokenized='true')
+    ner = stanza.Pipeline(
+        lang="uk", processors="tokenize,mwt,ner", tokenize_pretokenized="true"
+    )
     log.info("Processing text. It may take few seconds...")
     doc = ner(txt)
 
     tok_i = 1
     brat_str = ""
-    for ent in doc.ents:
-        brat_str += f'T{tok_i}\t{ent.type} {ent.start_char} {ent.end_char}\t{ent.text}\n'
-        tok_i += 1
+    for tok_i, ent in enumerate(doc.ents):
+        brat_str += (
+            f"T{tok_i + 1}\t{ent.type} {ent.start_char} {ent.end_char}\t{ent.text}\n"
+        )
+
     return brat_str
+
+
+def convert(args):
+    for text in map(pathlib.Path, glob.glob(args.text_files)):
+        log.info(f"Found text file {text}, parsing it")
+
+        markup = ""
+
+        if not args.ignore_annotations:
+            if args.ann_autodiscovery == "append":
+                ann = text.with_name(text.name + ".ann")
+            else:
+                ann = text.with_suffix(".ann")
+
+
+            if not ann.exists():
+                log.warning(f"Cannot find annotation file {ann} alongside to text file {text}, skipping")
+            else:
+                markup = ann.read_text()
+        
+        vulyk_obj = convert_bsf_2_vulyk(text.read_text(), markup)
+        print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
+
+
+def tag(args):
+    if args.ner_framework == "stanza":
+        model = StanzaNER(args.ner_model)
+    elif args.ner_framework == "spacy":
+        model = SpacyNER(args.ner_model)
+
+    for text in map(pathlib.Path, glob.glob(args.text_files)):
+        log.info(f"Found text file {text}, tagging it")
+
+        token_list = tokenize_text(text.read_text())
+
+        # we have list<paragraphs> of list<sentences> of list<tokens>
+        paragraph = ["\n".join([" ".join(t) for t in sent]) for sent in token_list]
+        txt = "\n".join(
+            paragraph
+        )  # stanza bug does not allow for double new line symbol right now
+
+        markup = model.tag_text(txt)
+
+        vulyk_obj = convert_bsf_2_vulyk(txt, markup)
+
+        print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
 
 
 if __name__ == "__main__":
     logging.basicConfig()
 
     parser = argparse.ArgumentParser(
-        description='Convert text (tokenized or generic) to json file supported by Vulyk. '
-                    'Data file can be supplied via cmd line arguments '
-                    'or you can pipe data in and out of this script like:'
-                    '`cat file.txt | python3 convert2vulyk.py > save_to_file.json`')
-    parser.add_argument('text_file', nargs="?", type=argparse.FileType('r'), default=sys.stdin,
-                        help='Text file to process. If file path not provided, assumes stdin stream.'
-                             ' Must be tokenized if --brat_file is provided. '
-                             '*.ann for lang-uk data set')
-    parser.add_argument('--brat_annotation', type=argparse.FileType('r'), default=None,
-                        help='Path to file with Brat standoff markup')
-    parser.add_argument('--drop_annotations', default=False, action="store_true",
-                        help='Do not write annotations (or skip ner tagging) to the output')
-    parser.add_argument('-v', action='store_true', help='Print more logs (info)')
-    parser.add_argument('-vv', action='store_true', help='Print even more logs (debug)')
+        description="Convert tokenized pre-annotated text or tag generic text to json file supported by Vulyk. "
+        "Data file can be supplied via cmd line arguments "
+        "or you can pipe data in and out of this script like:"
+        "`cat file.txt | python3 convert2vulyk.py tag >> save_to_file.json`"
+    )
+
+    parser.add_argument(
+        "text_files",
+        help="File mask to collect text files to process."
+        " Must be tokenized if convert command is used. "
+        "*.ann for lang-uk data set",
+    )
+
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="Print even more logs (debug)",
+        action="store_const",
+        dest="loglevel",
+        const=logging.DEBUG,
+        default=logging.WARNING,
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="Print more logs (info)",
+        action="store_const",
+        dest="loglevel",
+        const=logging.INFO,
+    )
+
+    subparsers = parser.add_subparsers(help="Available commands")
+
+    convert_parser = subparsers.add_parser(
+        "convert",
+        help="Convert tokenized texts (with optional annotations in a separate files) to a Vulyk format",
+    )
+
+    convert_parser.set_defaults(func=convert)
+    convert_parser.add_argument('--ann_autodiscovery', default="replace", choices=("append", "replace"),
+                                help='How to find *.ann files: by appending or replacing the extension')
+    convert_parser.add_argument('--ignore_annotations', default=False, action="store_true",
+                            help='Do not try to load *.ann files')
+
+
+    tag_parser = subparsers.add_parser(
+        "tag", help="Tag given files using one of frameworks/models specified in params"
+    )
+
+    tag_parser.add_argument(
+        "--ner_framework",
+        choices=("stanza", "spacy"),
+        default="stanza",
+        help="Which framework to use for the tagging",
+    )
+
+    tag_parser.add_argument(
+        "--ner_model",
+        default="uk",
+        help="Which model to use. Stanza has pre-built model `uk` for ukrainian language. "
+        "For Spacy you might specify pre-built model (you should run `python -m spacy download model_name` first) "
+        "or provide a path to the directory with the model",
+    )
+
+    tag_parser.set_defaults(func=tag)
 
     args = parser.parse_args()
 
-    if args.vv:
-        log.setLevel(logging.DEBUG)
-    elif args.v:
-        log.setLevel(logging.INFO)
+    log.setLevel(args.loglevel)
 
-    brat_markup = None
-    if args.brat_annotation is not None:  # read markup
-        log.info(f"Reading markup from file")
-        brat_markup = args.brat_annotation.read()
-        log.debug(brat_markup)
+    if hasattr(args, "func"):
+        args.func(args)
     else:
-        log.info(f"No markup file is provided. Assuming a raw text as input.")
+        parser.print_usage()
 
-    text_data = args.text_file.read()
-
-    if args.drop_annotations:
-        brat_markup = ""
-
-    vulyk_json = text_2_vulyk(text_data, brat_markup)
-    print(vulyk_json)
+    # vulyk_json = text_2_vulyk(text_data, brat_markup)
+    # print(vulyk_json)
