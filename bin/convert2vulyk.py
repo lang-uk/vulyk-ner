@@ -7,7 +7,8 @@ import re
 import time
 import glob
 import pathlib
-from tokenize_uk import tokenize_text
+from typing import Any
+from tokenize_uk import tokenize_text  # type: ignore
 from collections import namedtuple
 
 log = logging.getLogger(__name__)
@@ -15,19 +16,27 @@ log = logging.getLogger(__name__)
 BsfInfo = namedtuple("BsfInfo", "id, tag, start_idx, end_idx, token")
 
 
-class StanzaNER:
-    def __init__(self, model):
-        import stanza
+class AbstractNER:
+    def __init__(self, model: str) -> None:
+        raise NotImplementedError()
+
+    def tag_text(self, txt: str) -> str:
+        raise NotImplementedError()
+
+
+class StanzaNER(AbstractNER):
+    def __init__(self, model: str) -> None:
+        import stanza  # type: ignore
 
         logging.getLogger("stanza").setLevel(log.level)
         stanza.download(model)
 
         self.ner = stanza.Pipeline(lang=model, processors="tokenize,mwt,ner", tokenize_pretokenized="true")
 
-    def tag_text(self, txt):
+    def tag_text(self, txt: str) -> str:
         doc = self.ner(txt)
 
-        brat_str = ""
+        brat_str: str = ""
 
         for tok_i, ent in enumerate(doc.ents):
             brat_str += f"T{tok_i + 1}\t{ent.type} {ent.start_char} {ent.end_char}\t{ent.text}\n"
@@ -35,16 +44,16 @@ class StanzaNER:
         return brat_str
 
 
-class SpacyNER:
-    def __init__(self, model):
+class SpacyNER(AbstractNER):
+    def __init__(self, model: str) -> None:
         import spacy
 
         self.ner = spacy.load(model)
 
-    def tag_text(self, txt):
+    def tag_text(self, txt: str) -> str:
         doc = self.ner(txt)
 
-        brat_str = ""
+        brat_str: str = ""
 
         if doc.ents:
             for tok_i, ent in enumerate(doc.ents):
@@ -53,7 +62,7 @@ class SpacyNER:
         return brat_str
 
 
-def parse_bsf(bsf_data: str) -> list:
+def parse_bsf(bsf_data: str) -> list[BsfInfo]:
     """
     Convert multiline textual bsf representation to a list of named entities.
 
@@ -67,7 +76,7 @@ def parse_bsf(bsf_data: str) -> list:
     #                     Token_id Entity start  end    text within range
     #                        \/      \/     \/    \/      \/
     ln_ptrn = re.compile(r"(T\d+)\s(\w+)\s(\d+)\s(\d+)\s(.+?)(?=T\d+\s\w+\s\d+\s\d+|$)", flags=re.DOTALL)
-    result = []
+    result: list = []
     for m in ln_ptrn.finditer(data):
         bsf = BsfInfo(m.group(1), m.group(2), int(m.group(3)), int(m.group(4)), m.group(5).strip())
         result.append(bsf)
@@ -85,13 +94,13 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
 
     tags_mapping = {"PERS": "ПЕРС", "ORG": "ОРГ", "LOC": "ЛОК", "MISC": "РІЗН"}
 
-    bsf = parse_bsf(bsf_markup)
-    ents = [[e.id, tags_mapping.get(e.tag, e.tag), [[e.start_idx, e.end_idx]]] for e in bsf]
+    bsf: list[BsfInfo] = parse_bsf(bsf_markup)
+    ents: list[list[Any]] = [[e.id, tags_mapping.get(e.tag, e.tag), [[e.start_idx, e.end_idx]]] for e in bsf]
 
-    idx = 0
-    t_idx = 0
-    s_offsets = []
-    t_offsets = []
+    idx: int = 0
+    t_idx: int = 0
+    s_offsets: list[tuple[int, int]] = []
+    t_offsets: list[tuple[int, int]] = []
     if text:
         for s in text.split("\n"):
             s_offsets.append([idx, idx + len(s)])
@@ -102,8 +111,8 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
             idx += len(s) + 1
             t_idx = idx
 
-    ts = int(time.time())
-    vulyk = {
+    ts: int = int(time.time())
+    vulyk: dict = {
         "modifications": [],
         "equivs": [],
         "protocol": 1,
@@ -129,7 +138,7 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
     return vulyk
 
 
-def convert(text_files, ignore_annotations, ann_autodiscovery):
+def convert(text_files: str, ignore_annotations: bool, ann_autodiscovery: str) -> None:
     for text in map(pathlib.Path, glob.glob(text_files)):
         log.info(f"Found text file {text}, parsing it")
 
@@ -150,7 +159,7 @@ def convert(text_files, ignore_annotations, ann_autodiscovery):
         print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
 
 
-def convert_command(args):
+def convert_command(args: argparse.Namespace) -> None:
     return convert(
         text_files=args.text_files,
         ignore_annotations=args.ignore_annotations,
@@ -158,9 +167,9 @@ def convert_command(args):
     )
 
 
-def tag(text_files, ner_framework, ner_model):
+def tag(text_files: str, ner_framework: str, ner_model: str) -> None:
     if ner_framework == "stanza":
-        model = StanzaNER(ner_model)
+        model: AbstractNER = StanzaNER(ner_model)
     elif ner_framework == "spacy":
         model = SpacyNER(ner_model)
 
@@ -180,14 +189,14 @@ def tag(text_files, ner_framework, ner_model):
         print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
 
 
-def tag_command(args):
+def tag_command(args: argparse.Namespace) -> None:
     return tag(args.text_files, args.ner_framework, args.ner_model)
 
 
 if __name__ == "__main__":
     logging.basicConfig()
 
-    parser = argparse.ArgumentParser(
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Convert tokenized pre-annotated texts or tag generic texts to jsonlines file supported by Vulyk. \n"
         "Data files supplied via glob-like cmd line arguments. Output goes directly to stdout. \n"
         "Script has two modes: convert, to convert texts (with optional annotations) "
@@ -195,9 +204,9 @@ if __name__ == "__main__":
         "Please check help texts for the respecting commands for details on parameters."
     )
 
-    subparsers = parser.add_subparsers(dest="cmd", help="Available commands")
+    subparsers: argparse._SubParsersAction = parser.add_subparsers(dest="cmd", help="Available commands")
 
-    convert_parser = subparsers.add_parser(
+    convert_parser: argparse.ArgumentParser = subparsers.add_parser(
         "convert",
         help="Convert tokenized texts (with optional annotations in a separate files) to a Vulyk format "
         "To make it parse all text files together with annotations you should use something like this "
@@ -217,7 +226,7 @@ if __name__ == "__main__":
         "--ignore_annotations", default=False, action="store_true", help="Do not try to load *.ann files"
     )
 
-    tag_parser = subparsers.add_parser(
+    tag_parser: argparse.ArgumentParser = subparsers.add_parser(
         "tag",
         help="Tag given files using one of frameworks/models specified in params. "
         "Currently the script supports Stanza and Spacy frameworks. To use the script in this mode you should install "
@@ -267,7 +276,7 @@ if __name__ == "__main__":
         const=logging.INFO,
     )
 
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
 
     log.setLevel(args.loglevel)
 

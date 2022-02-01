@@ -104,7 +104,7 @@ def parse_jsonlines(jsonl_file: pathlib.Path, output_dir: pathlib.Path) -> None:
 if __name__ == "__main__":
     logging.basicConfig()
 
-    parser = argparse.ArgumentParser(
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Convert jsonlines output files exported from vulyk into IOB format (currently). "
         "Each answer will be stored in the separate file, located in the `batch_dir/username/task_id.iob`"
     )
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         const=logging.INFO,
     )
 
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
     assert args.output_dir.is_dir(), f"{args.output_dir} is not a directory"
 
     log.setLevel(args.loglevel)
