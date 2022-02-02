@@ -7,7 +7,7 @@ import re
 import time
 import glob
 import pathlib
-from typing import Any
+from typing import Any, Generator
 from tokenize_uk import tokenize_text  # type: ignore
 from collections import namedtuple
 
@@ -83,7 +83,41 @@ def parse_bsf(bsf_data: str) -> list[BsfInfo]:
     return result
 
 
-def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
+def simple_tokenizer(text: str) -> list[list[str]]:
+    """
+    Given whitespace/newline tokenized text, return the
+    list of sentences (where each sentence is made of tokens)
+    using whitespaces and newlines
+    """
+
+    doc: list[list[str]] = []
+    if text:
+        for s in text.split("\n"):
+            doc.append(s.strip().split(" "))
+
+    return doc
+
+
+def reconstruct_tokenized(tokenized_text: list[list[str]]) -> Generator[str, None, None]:
+    SPACES_BEFORE: str = "([“«"
+    NO_SPACE_BEFORE: str = ".,:!?)]”»"
+
+    for s_idx, s in enumerate(tokenized_text):
+        if s_idx > 0:
+            yield "\n"
+        prev_token = ""
+        for w_idx, w in enumerate(map(str.strip, s)):
+            if not w:
+                continue
+
+            if w_idx > 0 and w not in NO_SPACE_BEFORE and not prev_token in SPACES_BEFORE:
+                yield " "
+
+            yield w
+            prev_token = w
+
+
+def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str) -> dict:
     """
     Given tokenized text and named entities in Brat standoff format, generate object
     in the format compatible with Vulyk markup tool.
@@ -95,21 +129,34 @@ def convert_bsf_2_vulyk(text: str, bsf_markup: str) -> dict:
     tags_mapping = {"PERS": "ПЕРС", "ORG": "ОРГ", "LOC": "ЛОК", "MISC": "РІЗН"}
 
     bsf: list[BsfInfo] = parse_bsf(bsf_markup)
-    ents: list[list[Any]] = [[e.id, tags_mapping.get(e.tag, e.tag), [[e.start_idx, e.end_idx]]] for e in bsf]
+    ents: list[list[Any]] = [[e.id, tags_mapping.get(e.tag, e.tag), [(e.start_idx, e.end_idx)]] for e in bsf]
 
     idx: int = 0
     t_idx: int = 0
     s_offsets: list[tuple[int, int]] = []
     t_offsets: list[tuple[int, int]] = []
-    if text:
-        for s in text.split("\n"):
-            s_offsets.append([idx, idx + len(s)])
-            for t in s.strip().split(" "):
-                t_offsets.append([t_idx, t_idx + len(t)])
-                t_idx += len(t) + 1
+    text: str = ""
+    s: str = ""
+
+    for w in reconstruct_tokenized(tokenized_text):
+        if w == "\n":
+            if s:
+                s_offsets.append((idx, idx + len(s)))
 
             idx += len(s) + 1
-            t_idx = idx
+            s = ""
+        else:
+            s += w
+
+        text += w
+
+        if w not in [" ", "\n"]:
+            t_offsets.append((t_idx, t_idx + len(w)))
+
+        t_idx += len(w)
+
+    if s:
+        s_offsets.append((idx, idx + len(s)))
 
     ts: int = int(time.time())
     vulyk: dict = {
