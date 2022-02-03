@@ -24,7 +24,7 @@ This will tokenize text, perform NER search and output results into Vulyk compat
 
 Required dependencies
 ```shell
-pip3 install stanza
+pip3 install -r extra_requirements
 ```
 
 ```shell
