@@ -8,12 +8,21 @@ import time
 import glob
 import pathlib
 from typing import Any, Generator
-from tokenize_uk import tokenize_text  # type: ignore
 from collections import namedtuple
+from enum import Enum
+from itertools import chain
+
+from tokenize_uk import tokenize_text  # type: ignore
 
 log = logging.getLogger(__name__)
 
 BsfInfo = namedtuple("BsfInfo", "id, tag, start_idx, end_idx, token")
+
+
+class TokenizationType(Enum):
+    NOOP = 1
+    WHITESPACE = 2
+    TOKENIZE_UK = 3
 
 
 class AbstractNER:
@@ -98,6 +107,20 @@ def simple_tokenizer(text: str) -> list[list[str]]:
     return doc
 
 
+def read_and_tokenize(text: str, fmt: str, tokenizer: TokenizationType) -> list[list[str]]:
+    if fmt == "json":
+        assert tokenizer == TokenizationType.NOOP, "Json is meant to be already tokenized"
+        return json.loads(text)
+    else:
+        assert tokenizer != TokenizationType.NOOP, "You cannot keep texts not-tokenized"
+        if tokenizer == TokenizationType.WHITESPACE:
+            return simple_tokenizer(text)
+        elif tokenizer == TokenizationType.TOKENIZE_UK:
+            return list(chain(*tokenize_text(text)))
+
+    return []  # Calm down, mypy
+
+
 def reconstruct_tokenized(tokenized_text: list[list[str]]) -> Generator[str, None, None]:
     SPACES_BEFORE: str = "([“«"
     NO_SPACE_BEFORE: str = ".,:!?)]”»"
@@ -121,7 +144,7 @@ def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str) -> dic
     """
     Given tokenized text and named entities in Brat standoff format, generate object
     in the format compatible with Vulyk markup tool.
-    :param text: tokenized text (space as separator)
+    :param text: tokenized text
     :param bsf_markup: named entities in Brat standoff format
     :return: dict that can be directly converted to Vulyk json file
     """
@@ -185,8 +208,8 @@ def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str) -> dic
     return vulyk
 
 
-def convert(text_files: str, ignore_annotations: bool, ann_autodiscovery: str) -> None:
-    for text in map(pathlib.Path, glob.glob(text_files)):
+def convert(input_files: str, fmt: str, ignore_annotations: bool, ann_autodiscovery: str) -> None:
+    for text in map(pathlib.Path, glob.glob(input_files)):
         log.info(f"Found text file {text}, parsing it")
 
         markup = ""
@@ -202,42 +225,45 @@ def convert(text_files: str, ignore_annotations: bool, ann_autodiscovery: str) -
             else:
                 markup = ann.read_text()
 
-        vulyk_obj = convert_bsf_2_vulyk(text.read_text(), markup)
+        tokenized: list[list[str]] = read_and_tokenize(
+            text.read_text(), fmt, TokenizationType.NOOP if fmt == "json" else TokenizationType.WHITESPACE
+        )
+
+        vulyk_obj: dict = convert_bsf_2_vulyk(tokenized, markup)
         print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
 
 
 def convert_command(args: argparse.Namespace) -> None:
     return convert(
-        text_files=args.text_files,
+        input_files=args.input_files,
+        fmt=args.format,
         ignore_annotations=args.ignore_annotations,
         ann_autodiscovery=args.ann_autodiscovery,
     )
 
 
-def tag(text_files: str, ner_framework: str, ner_model: str) -> None:
+def tag(input_files: str, fmt: str, ner_framework: str, ner_model: str) -> None:
     if ner_framework == "stanza":
         model: AbstractNER = StanzaNER(ner_model)
     elif ner_framework == "spacy":
         model = SpacyNER(ner_model)
 
-    for text in map(pathlib.Path, glob.glob(text_files)):
+    for text in map(pathlib.Path, glob.glob(input_files)):
         log.info(f"Found text file {text}, tagging it")
 
-        token_list = tokenize_text(text.read_text())
+        tokenized: list[list[str]] = read_and_tokenize(
+            text.read_text(), fmt, TokenizationType.NOOP if fmt == "json" else TokenizationType.TOKENIZE_UK
+        )
 
-        # we have list<paragraphs> of list<sentences> of list<tokens>
-        paragraph = ["\n".join([" ".join(t) for t in sent]) for sent in token_list]
-        txt = "\n".join(paragraph)  # stanza bug does not allow for double new line symbol right now
+        markup: str = model.tag_text("".join(reconstruct_tokenized(tokenized)))
 
-        markup = model.tag_text(txt)
-
-        vulyk_obj = convert_bsf_2_vulyk(txt, markup)
+        vulyk_obj = convert_bsf_2_vulyk(tokenized, markup)
 
         print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
 
 
 def tag_command(args: argparse.Namespace) -> None:
-    return tag(args.text_files, args.ner_framework, args.ner_model)
+    return tag(args.input_files, args.format, args.ner_framework, args.ner_model)
 
 
 if __name__ == "__main__":
@@ -299,10 +325,23 @@ if __name__ == "__main__":
     tag_parser.set_defaults(func=tag_command)
 
     parser.add_argument(
-        "text_files",
-        help="File mask to collect text files to process."
-        " Must be tokenized if convert command is used. "
-        "*.ann for lang-uk data set",
+        "input_files",
+        help="File mask to collect files to process. "
+        "Might be raw texts or json files in format "
+        "`[['sent1_word1', 'sent1_word2'], ['sent2_word1', 'sent2_word2']]`. "
+        "Use `--format` flag ot provide the format [`txt` (default) or `json`]. "
+        "For text files tokenize_uk tokenizer will be applied. "
+        "For json files, provided tokenization will remain intact, however, "
+        "spaces will be normalized/restored according to the `reconstruct_tokenized` logic",
+    )
+
+    parser.add_argument(
+        "-f",
+        "--format",
+        help="How to treat input files? As textual or pre-tokenized json's",
+        dest="format",
+        choices=("txt", "json"),
+        default="txt",
     )
 
     parser.add_argument(
