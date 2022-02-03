@@ -19,6 +19,18 @@ log = logging.getLogger(__name__)
 BsfInfo = namedtuple("BsfInfo", "id, tag, start_idx, end_idx, token")
 
 
+class AlignedToken(namedtuple("AlignedToken", ("token", "orig_pos", "new_pos"))):
+    """
+    As we do changing the whitespaces in tokenized text according to the punctuation rules,
+    we need a class to maintain the positions of whitespace tokenized vs. normalized one
+    """
+
+    __slots__: tuple = ()
+
+    def __str__(self) -> str:
+        return str(self.token)
+
+
 class TokenizationType(Enum):
     NOOP = 1
     WHITESPACE = 2
@@ -102,7 +114,7 @@ def simple_tokenizer(text: str) -> list[list[str]]:
     doc: list[list[str]] = []
     if text:
         for s in text.split("\n"):
-            doc.append(s.strip().split(" "))
+            doc.append(s.split(" "))
 
     return doc
 
@@ -121,31 +133,64 @@ def read_and_tokenize(text: str, fmt: str, tokenizer: TokenizationType) -> list[
     return []  # Calm down, mypy
 
 
-def reconstruct_tokenized(tokenized_text: list[list[str]]) -> Generator[str, None, None]:
+def reconstruct_tokenized(tokenized_text: list[list[str]]) -> Generator[AlignedToken, None, None]:
+    """
+    Accepts tokenized text [["sent1_word1", "sent1_word2"], ["sent2_word2"]]
+    and normalizing the spaces in the text according to the punctuation.
+    Returns an iterator over AlignedToken, where each token has the information
+    on the original position and updated position
+    """
     SPACES_BEFORE: str = "([“«"
     NO_SPACE_BEFORE: str = ".,:!?)]”»"
 
+    orig_pos: int = 0
+    adj_pos: int = 0
+
     for s_idx, s in enumerate(tokenized_text):
         if s_idx > 0:
-            yield "\n"
-        prev_token = ""
-        for w_idx, w in enumerate(map(str.strip, s)):
-            if not w:
+            yield AlignedToken("\n", (orig_pos, orig_pos + 1), (adj_pos, adj_pos + 1))
+            orig_pos += 1
+            adj_pos += 1
+
+        prev_token: str = ""
+        for w_idx, w in enumerate(s):
+            w_stripped = w.strip()
+
+            if not w_stripped:
+                # If original text contained a space(-es), let's adjust original position for it
+                # + one space after
+                orig_pos += len(w)
+                if w_idx > 0:
+                    orig_pos += 1
+
                 continue
 
-            if w_idx > 0 and w not in NO_SPACE_BEFORE and not prev_token in SPACES_BEFORE:
-                yield " "
+            if w_idx > 0:
+                if w_stripped not in NO_SPACE_BEFORE and not prev_token in SPACES_BEFORE:
+                    yield AlignedToken(" ", (orig_pos, orig_pos + 1), (adj_pos, adj_pos + 1))
+                    orig_pos += 1
+                    adj_pos += 1
+                else:
+                    # If we are omitting the space (for example, before comma), we
+                    # adjusting original position as if it's there
+                    orig_pos += 1
 
-            yield w
-            prev_token = w
+            yield AlignedToken(w_stripped, (orig_pos, orig_pos + len(w)), (adj_pos, adj_pos + len(w_stripped)))
+
+            orig_pos += len(w)
+            adj_pos += len(w_stripped)
+
+            prev_token = w_stripped
 
 
-def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str) -> dict:
+def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str, compensate_for_offsets: bool = False) -> dict:
     """
     Given tokenized text and named entities in Brat standoff format, generate object
     in the format compatible with Vulyk markup tool.
     :param text: tokenized text
     :param bsf_markup: named entities in Brat standoff format
+    :param compensate_for_offsets: when converting already tokenized text from txt/ann pair, this will
+    displace NER tokens according to the changes made to the punctuation/whitespaces
     :return: dict that can be directly converted to Vulyk json file
     """
 
@@ -160,26 +205,45 @@ def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str) -> dic
     t_offsets: list[tuple[int, int]] = []
     text: str = ""
     s: str = ""
+    prev_displacement: int = 0
+
+    displacements: list[tuple[int, int]] = []
 
     for w in reconstruct_tokenized(tokenized_text):
-        if w == "\n":
+        # Here we constructing a displacement map, i.e how we should adjust all the entities
+        # after origina tokens were displaced according to space normalization.
+        if w.orig_pos[0] > w.new_pos[0]:
+            if w.orig_pos[0] - w.new_pos[0] > prev_displacement:
+                displacements.append((w.orig_pos[0], w.orig_pos[0] - w.new_pos[0] - prev_displacement))
+                prev_displacement = w.orig_pos[0] - w.new_pos[0]
+
+        if w.token == "\n":
             if s:
                 s_offsets.append((idx, idx + len(s)))
 
             idx += len(s) + 1
             s = ""
         else:
-            s += w
+            s += w.token
 
-        text += w
+        text += w.token
 
-        if w not in [" ", "\n"]:
-            t_offsets.append((t_idx, t_idx + len(w)))
+        if w.token not in [" ", "\n"]:
+            t_offsets.append((t_idx, t_idx + len(w.token)))
 
-        t_idx += len(w)
+        t_idx += len(w.token)
 
     if s:
         s_offsets.append((idx, idx + len(s)))
+
+    if compensate_for_offsets:
+        for ent in ents:
+            offset: int = 0
+            for disp in displacements:
+                if ent[2][0][0] >= disp[0]:
+                    offset += disp[1]
+
+            ent[2][0] = (ent[2][0][0] - offset, ent[2][0][1] - offset)
 
     ts: int = int(time.time())
     vulyk: dict = {
@@ -229,7 +293,7 @@ def convert(input_files: str, fmt: str, ignore_annotations: bool, ann_autodiscov
             text.read_text(), fmt, TokenizationType.NOOP if fmt == "json" else TokenizationType.WHITESPACE
         )
 
-        vulyk_obj: dict = convert_bsf_2_vulyk(tokenized, markup)
+        vulyk_obj: dict = convert_bsf_2_vulyk(tokenized, markup, compensate_for_offsets=True)
         print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
 
 
@@ -255,9 +319,9 @@ def tag(input_files: str, fmt: str, ner_framework: str, ner_model: str) -> None:
             text.read_text(), fmt, TokenizationType.NOOP if fmt == "json" else TokenizationType.TOKENIZE_UK
         )
 
-        markup: str = model.tag_text("".join(reconstruct_tokenized(tokenized)))
+        markup: str = model.tag_text("".join(map(str, reconstruct_tokenized(tokenized))))
 
-        vulyk_obj = convert_bsf_2_vulyk(tokenized, markup)
+        vulyk_obj = convert_bsf_2_vulyk(tokenized, markup, compensate_for_offsets=False)
 
         print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
 

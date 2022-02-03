@@ -1,7 +1,7 @@
 import time
 import unittest
 
-from bin.convert2vulyk import convert_bsf_2_vulyk, reconstruct_tokenized
+from bin.convert2vulyk import convert_bsf_2_vulyk, simple_tokenizer
 
 
 class TestBsf2Vulyk(unittest.TestCase):
@@ -95,13 +95,42 @@ class TestBsf2Vulyk(unittest.TestCase):
     def test_entities_offset(self):
         data: list[list[str]] = [["Речення", "з", "Токен", "."], ["токен", "Другий"]]
         bsf_markup: str = """T1 ORG 10 15 Токен
-T2 MISC 23 31 Другий"""
-        expected = [["T1", "ОРГ", [(10, 15)]], ["T2", "РІЗН", [(23, 31)]]]
-        result = convert_bsf_2_vulyk(data, bsf_markup)
+T2 MISC 24 30 Другий"""
+        expected = [["T1", "ОРГ", [(10, 15)]], ["T2", "РІЗН", [(23, 29)]]]
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
         self.assertEqual(expected, result["entities"])
         self.assertEqual(self._get_sentences(result), ["Речення з Токен.", "токен Другий"])
         self.assertEqual(self._get_words(result), ["Речення", "з", "Токен", ".", "токен", "Другий"])
         self.assertEqual(self._get_entities(result), ["Токен", "Другий"])
+
+    def test_entities_alignement(self):
+        data: list[list[str]] = [["Семпл  ", "з", "Токен", "."], ["токен", "Другий"]]
+        bsf_markup: str = """T1 ORG 10 15 Токен
+T2 MISC 24 30 Другий"""
+        expected = [["T1", "ОРГ", [(8, 13)]], ["T2", "РІЗН", [(21, 27)]]]
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
+        self.assertEqual(expected, result["entities"])
+        self.assertEqual(self._get_sentences(result), ["Семпл з Токен.", "токен Другий"])
+        self.assertEqual(self._get_words(result), ["Семпл", "з", "Токен", ".", "токен", "Другий"])
+        self.assertEqual(self._get_entities(result), ["Токен", "Другий"])
+
+
+    def test_complicated_realignment(self):
+        data: list[list[str]] = simple_tokenizer("""Така любов до скрипки у Романа Шмігельського змалку , бо де б не збиралися в свята односельці , завжди була музика , пісня .
+Тож співав усюди , а про музичний інструмент мріяв .
+Хоч і професію сільському хлопцеві вдалося здобути потрібну , і робота слюсаря пошанована , але залюбки співав і в церковному хорі , і в художній самодіяльності .
+Мабуть , за золоті руки й за чудовий тенор полюбила його пані Анна , з якою вони разом уже більш як півстоліття , і синів добрих виховали , які подарували їм онуків і правнука .
+
+Саме народження первістка Олексія спонукало пана Романа опанувати музичну грамоту .
+Але в той час вечірньої музичної школи не було , тож їздив до Калуша на приватні уроки , а згодом аж з Києва привіз бандуру .
+""")
+        bsf_markup: str = """T1 LOC 666 672 Калуша
+T2 LOC 707 712 Києва
+"""
+        expected = [["T1", "ЛОК", [(649, 655)]], ["T2", "ЛОК", [(689, 694)]]]
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
+        self.assertEqual(expected, result["entities"])
+        self.assertEqual(self._get_entities(result), ["Калуша", "Києва"])
 
 
 if __name__ == "__main__":

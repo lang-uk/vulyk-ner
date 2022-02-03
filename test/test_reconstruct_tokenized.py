@@ -8,40 +8,35 @@ class TestReconstructTokenized(unittest.TestCase):
     def test_empty_tokenized(self):
         data = []
         expected = []
-        self.assertEqual(expected, list(reconstruct_tokenized(data)))
+        self.assertEqual(expected, list(map(str, reconstruct_tokenized(data))))
 
     def test_simple_tokenized(self):
-        data = [["Мама", "мила", "раму"]]
-        expected = []
-        self.assertEqual(["Мама", " ", "мила", " ", "раму"], list(reconstruct_tokenized(data)))
+        data: list[list[str]] = [["Мама", "мила", "раму"]]
+        self.assertEqual(["Мама", " ", "мила", " ", "раму"], list(map(str, reconstruct_tokenized(data))))
 
     def test_remove_spaces(self):
-        data = [["Мама", " ", "мила", " ", "раму "]]
-        expected = []
-        self.assertEqual(["Мама", " ", "мила", " ", "раму"], list(reconstruct_tokenized(data)))
+        data: list[list[str]] = [["Мама", " ", "мила", " ", "раму "]]
+        self.assertEqual(["Мама", " ", "мила", " ", "раму"], list(map(str, reconstruct_tokenized(data))))
 
     def test_few_sentences(self):
-        data = [["Мама", "мила", "раму", "!"], ["рама", "була", "біла", "?"]]
-        expected = []
+        data: list[list[str]] = [["Мама", "мила", "раму", "!"], ["рама", "була", "біла", "?"]]
         self.assertEqual(
             ["Мама", " ", "мила", " ", "раму", "!", "\n", "рама", " ", "була", " ", "біла", "?"],
-            list(reconstruct_tokenized(data)),
+            list(map(str, reconstruct_tokenized(data))),
         )
 
     def test_punctuation(self):
-        data = [["Мамо", ",", "навіщо", "!", "?"], ["Адже", ",", "рама", "була", "біла", "."]]
-        expected = []
+        data: list[list[str]] = [["Мамо", ",", "навіщо", "!", "?"], ["Адже", ",", "рама", "була", "біла", "."]]
         self.assertEqual(
             ["Мамо", ",", " ", "навіщо", "!", "?", "\n", "Адже", ",", " ", "рама", " ", "була", " ", "біла", "."],
-            list(reconstruct_tokenized(data)),
+            list(map(str, reconstruct_tokenized(data))),
         )
 
     def test_quotes(self):
-        data = [
+        data: list[list[str]] = [
             ["Тендер", "“", "виграв", "”", "ТОВ", "«", "ЛАБЄАН-хісв", "»", "."],
             ["Сумна", "історія", ",", "малята", "."],
         ]
-        expected = []
         self.assertEqual(
             [
                 "Тендер",
@@ -65,14 +60,14 @@ class TestReconstructTokenized(unittest.TestCase):
                 "малята",
                 ".",
             ],
-            list(reconstruct_tokenized(data)),
+            list(map(str, reconstruct_tokenized(data))),
         )
 
     def test_brackets(self):
-        data = [
+        data: list[list[str]] = [
             ["Ой", "лишенько", "(", "[", "скільки", "ж", "тут", "дужок", "]", ")", ",", "це", "що", ",", "лісп", "?"],
         ]
-        expected = []
+
         self.assertEqual(
             [
                 "Ой",
@@ -100,7 +95,223 @@ class TestReconstructTokenized(unittest.TestCase):
                 "лісп",
                 "?",
             ],
-            list(reconstruct_tokenized(data)),
+            list(map(str, reconstruct_tokenized(data))),
+        )
+
+    def _get_words(self, text: str, tokens: list[tuple[int, int]]) -> list[str]:
+        return [text[i1:i2] for (i1, i2) in tokens]
+
+    def test_spaces_alignement(self):
+        data: list[list[str]] = [
+            ["Цікаве", " ", "питання"],
+        ]
+
+        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_text: str = "".join((map(str, adjusted_tokens)))
+        whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
+
+        self.assertEqual(
+            "Цікаве питання",
+            adjusted_text,
+        )
+
+        self.assertEqual(
+            [
+                "Цікаве",
+                " ",
+                "питання",
+            ],
+            self._get_words(adjusted_text, [t.new_pos for t in adjusted_tokens]),
+        )
+
+        self.assertEqual(
+            [
+                "Цікаве",
+                " ",
+                "питання",
+            ],
+            self._get_words(whitespaced_text, [t.orig_pos for t in adjusted_tokens]),
+        )
+
+    def test_simple_alignement(self):
+        data: list[list[str]] = [
+            ["Цікаве", "питання ", " , ", " Мурзіку", "."],
+        ]
+
+        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_text: str = "".join((map(str, adjusted_tokens)))
+        whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
+
+        self.assertEqual(
+            "Цікаве питання, Мурзіку.",
+            adjusted_text,
+        )
+
+        self.assertEqual(
+            [
+                "Цікаве",
+                " ",
+                "питання",
+                ",",
+                " ",
+                "Мурзіку",
+                ".",
+            ],
+            self._get_words(adjusted_text, [t.new_pos for t in adjusted_tokens]),
+        )
+
+        self.assertEqual(
+            [
+                "Цікаве",
+                " ",
+                "питання ",
+                " , ",
+                " ",
+                " Мурзіку",
+                ".",
+            ],
+            self._get_words(whitespaced_text, [t.orig_pos for t in adjusted_tokens]),
+        )
+
+    def test_hanging_spaces_alignement(self):
+        data: list[list[str]] = [
+            [" ", " Цікаве ", "питання ", " , ", " Мурзіку", "."],
+        ]
+
+        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_text: str = "".join((map(str, adjusted_tokens)))
+        whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
+
+        self.assertEqual(
+            "Цікаве питання, Мурзіку.",
+            adjusted_text,
+        )
+
+        self.assertEqual(
+            [
+                "Цікаве",
+                " ",
+                "питання",
+                ",",
+                " ",
+                "Мурзіку",
+                ".",
+            ],
+            self._get_words(adjusted_text, [t.new_pos for t in adjusted_tokens]),
+        )
+
+        self.assertEqual(
+            [
+                " Цікаве ",
+                " ",
+                "питання ",
+                " , ",
+                " ",
+                " Мурзіку",
+                ".",
+            ],
+            self._get_words(whitespaced_text, [t.orig_pos for t in adjusted_tokens]),
+        )
+
+    def test_alignement(self):
+        data: list[list[str]] = [
+            ["Цікаве", "питання", ", ", " ", "Мурзіку", "   ", "Васильовичу", "."],
+            ["Будемо", " ", "полемізувати", " ."],
+        ]
+
+        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_text: str = "".join((map(str, adjusted_tokens)))
+        whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
+
+        self.assertEqual(
+            "Цікаве питання, Мурзіку Васильовичу.\nБудемо полемізувати.",
+            adjusted_text,
+        )
+
+        self.assertEqual(
+            [
+                "Цікаве",
+                " ",
+                "питання",
+                ",",
+                " ",
+                "Мурзіку",
+                " ",
+                "Васильовичу",
+                ".",
+                "\n",
+                "Будемо",
+                " ",
+                "полемізувати",
+                ".",
+            ],
+
+            self._get_words(adjusted_text, [t.new_pos for t in adjusted_tokens]),
+        )
+
+        self.assertEqual(
+            self._get_words(whitespaced_text, [t.orig_pos for t in adjusted_tokens]),
+            [
+                "Цікаве",
+                " ",
+                "питання",
+                ", ",
+                " ",
+                "Мурзіку",
+                " ",
+                "Васильовичу",
+                ".",
+                "\n",
+                "Будемо",
+                " ",
+                "полемізувати",
+                " .",
+            ],
+        )
+
+    def test_alignement_cornercase1(self):
+        data: list[list[str]] = [["Семпл  ", "з", "Токен", "."], ["токен", "Другий"]]
+
+        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_text: str = "".join((map(str, adjusted_tokens)))
+        whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
+
+        self.assertEqual(
+            "Семпл з Токен.\nтокен Другий",
+            adjusted_text,
+        )
+
+        self.assertEqual(
+            [
+                "Семпл",
+                " ",
+                "з",
+                " ",
+                "Токен",
+                ".",
+                "\n",
+                "токен",
+                " ",
+                "Другий",
+            ],
+
+            self._get_words(adjusted_text, [t.new_pos for t in adjusted_tokens]),
+        )
+
+        self.assertEqual(
+            self._get_words(whitespaced_text, [t.orig_pos for t in adjusted_tokens]),
+            [
+                "Семпл  ",
+                " ",
+                "з",
+                " ",
+                "Токен",
+                ".",
+                "\n",
+                "токен",
+                " ",
+                "Другий",
+            ],
         )
 
 
