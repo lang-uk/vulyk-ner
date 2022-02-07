@@ -136,7 +136,7 @@ def read_and_tokenize(text: str, fmt: str, tokenizer: TokenizationType) -> list[
 def reconstruct_tokenized(tokenized_text: list[list[str]]) -> Generator[AlignedToken, None, None]:
     """
     Accepts tokenized text [["sent1_word1", "sent1_word2"], ["sent2_word2"]]
-    and normalizing the spaces in the text according to the punctuation.
+    and normalizes spaces in the text according to the punctuation.
     Returns an iterator over AlignedToken, where each token has the information
     on the original position and updated position
     """
