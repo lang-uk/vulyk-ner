@@ -211,7 +211,7 @@ def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str, compen
 
     for w in reconstruct_tokenized(tokenized_text):
         # Here we constructing a displacement map, i.e how we should adjust all the entities
-        # after origina tokens were displaced according to space normalization.
+        # after original tokens were displaced according to space normalization.
         if w.orig_pos[0] > w.new_pos[0]:
             if w.orig_pos[0] - w.new_pos[0] > prev_displacement:
                 displacements.append((w.orig_pos[0], w.orig_pos[0] - w.new_pos[0] - prev_displacement))
