@@ -393,7 +393,7 @@ if __name__ == "__main__":
         help="File mask to collect files to process. "
         "Might be raw texts or json files in format "
         "`[['sent1_word1', 'sent1_word2'], ['sent2_word1', 'sent2_word2']]`. "
-        "Use `--format` flag ot provide the format [`txt` (default) or `json`]. "
+        "Use `--format` flag to specify the format [`txt` (default) or `json`]. "
         "For text files tokenize_uk tokenizer will be applied. "
         "For json files, provided tokenization will remain intact, however, "
         "spaces will be normalized/restored according to the `reconstruct_tokenized` logic",
