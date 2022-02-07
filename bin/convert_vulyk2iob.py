@@ -28,7 +28,7 @@ def convert_answer(task_record: dict) -> Union[str, None]:
     entities: List[tuple[str, int, int]] = []
 
     # Rearranging entities a bit
-    # Threating fragmented entities as separate for now
+    # Treating fragmented entities as separate for now
     for ent in task_record["entities"]:
         for subent in ent[2]:
             entities.append((ent[1], subent[0], subent[1]))
