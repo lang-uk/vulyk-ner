@@ -1,74 +1,137 @@
 import time
 import unittest
 
-from bin.convert2vulyk import convert_bsf_2_vulyk
+from bin.convert2vulyk import convert_bsf_2_vulyk, simple_tokenizer
 
 
 class TestBsf2Vulyk(unittest.TestCase):
     def setUp(self) -> None:
         self.vulyk_base = {
-            "modifications": [ ],
-            "equivs": [ ],
+            "modifications": [],
+            "equivs": [],
             "protocol": 1,
             "ctime": int(time.time()),
-            "triggers": [ ],
+            "triggers": [],
             "text": "",
-            "source_files": ["ann", "txt" ],
-            "messages": [ ],
+            "source_files": ["ann", "txt"],
+            "messages": [],
             "sentence_offsets": [],
-            "comments": [ ],
+            "comments": [],
             "entities": [],
             "mtime": int(time.time()),
-            "relations": [ ],
+            "relations": [],
             "token_offsets": [],
             "action": "getDocument",
-            "normalizations": [ ],
-            "attributes": [ ],
-            "events": [ ],
+            "normalizations": [],
+            "attributes": [],
+            "events": [],
             "document": "",
-            "collection": "/"
+            "collection": "/",
         }
 
+    def _get_sentences(self, result: dict) -> list[str]:
+        return [result["text"][i1:i2] for (i1, i2) in result["sentence_offsets"]]
+
+    def _get_words(self, result: dict) -> list[str]:
+        return [result["text"][i1:i2] for (i1, i2) in result["token_offsets"]]
+
+    def _get_entities(self, result: dict) -> list[str]:
+        res: list[str] = []
+
+        for _, _, ent in result["entities"]:
+            for i1, i2 in ent:
+                res.append(result["text"][i1:i2])
+
+        return res
+
     def test_empty_vulyk(self):
-        data = ''
-        bsf_markup = ''
+        data: list = []
+        bsf_markup: str = ""
         expected = self.vulyk_base
         self.assertEqual(expected, convert_bsf_2_vulyk(data, bsf_markup))
 
     def test_no_ents(self):
-        data = 'Текст без сутностей'
-        bsf_markup = ''
-        self.vulyk_base["text"] = data
-        self.assertEqual([], convert_bsf_2_vulyk(data, bsf_markup)["entities"])
-
-    def test_tok_idx(self):
-        data = """розпорядження землями
-в межах , визначених"""
+        data: list[list[str]] = [["Текст", "без", "сутностей"]]
         bsf_markup = ""
-        tok_idx = [[0, 13], [14, 21],
-                   [22, 23], [24, 29], [30, 31], [32, 42]]
-        self.vulyk_base["text"] = data
-        self.assertEqual(tok_idx, convert_bsf_2_vulyk(data, bsf_markup)["token_offsets"])
 
-    def test_sentence_offset(self):
-        data = """Речення номер 1 .
+        result: dict = convert_bsf_2_vulyk(data, bsf_markup)
 
-Рядок другий"""
-        bsf_markup = ""
-        sent_idx = [[0, 17], [18, 18], [19, 31]]
-        result = convert_bsf_2_vulyk(data, bsf_markup)
-        self.assertEqual(sent_idx, result["sentence_offsets"])
+        self.assertEqual(result["text"], "Текст без сутностей")
+
         self.assertEqual([], result["entities"])
 
+        self.assertEqual(self._get_sentences(result), ["Текст без сутностей"])
+
+        self.assertEqual(self._get_words(result), ["Текст", "без", "сутностей"])
+
+        self.assertEqual([(0, 19)], result["sentence_offsets"])
+
+    def test_tok_idx(self):
+        data: list[list[str]] = [["розпорядження", "землями", "\n", "в", "межах", ",", "визначених"]]
+
+        bsf_markup: str = ""
+        tok_idx: list[tuple[int, int]] = [(0, 13), (14, 21), (22, 23), (24, 29), (29, 30), (31, 41)]
+
+        result: dict = convert_bsf_2_vulyk(data, bsf_markup)
+        self.assertEqual(tok_idx, result["token_offsets"])
+
+        self.assertEqual(self._get_words(result), ["розпорядження", "землями", "в", "межах", ",", "визначених"])
+
+        self.assertEqual(self._get_sentences(result), ["розпорядження землями в межах, визначених"])
+
+        self.assertEqual(result["text"], "розпорядження землями в межах, визначених")
+
+    def test_sentence_offset(self):
+        data: list[list[str]] = [["Речення", "номер", "1", "."], ["Рядок", "другий"]]
+
+        bsf_markup: str = ""
+        sent_idx: list[tuple[int, int]] = [(0, 16), (17, 29)]
+        result: dict = convert_bsf_2_vulyk(data, bsf_markup)
+        self.assertEqual(sent_idx, result["sentence_offsets"])
+        self.assertEqual([], result["entities"])
+        self.assertEqual(self._get_sentences(result), ["Речення номер 1.", "Рядок другий"])
+        self.assertEqual(self._get_words(result), ["Речення", "номер", "1", ".", "Рядок", "другий"])
+
     def test_entities_offset(self):
-        data = """Речення з Токен . 
-токен Другий """
-        bsf_markup = """T1 ORG 11 15 Токен
-T2 MISC 25 31 Другий"""
-        expected = [["T1", "ORG", [[11, 15]]], ["T2", "MISC", [[25, 31]]]]
-        result = convert_bsf_2_vulyk(data, bsf_markup)
+        data: list[list[str]] = [["Речення", "з", "Токен", "."], ["токен", "Другий"]]
+        bsf_markup: str = """T1 ORG 10 15 Токен
+T2 MISC 24 30 Другий"""
+        expected = [["T1", "ОРГ", [(10, 15)]], ["T2", "РІЗН", [(23, 29)]]]
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
         self.assertEqual(expected, result["entities"])
+        self.assertEqual(self._get_sentences(result), ["Речення з Токен.", "токен Другий"])
+        self.assertEqual(self._get_words(result), ["Речення", "з", "Токен", ".", "токен", "Другий"])
+        self.assertEqual(self._get_entities(result), ["Токен", "Другий"])
+
+    def test_entities_alignement(self):
+        data: list[list[str]] = [["Семпл  ", "з", "Токен", "."], ["токен", "Другий"]]
+        bsf_markup: str = """T1 ORG 10 15 Токен
+T2 MISC 24 30 Другий"""
+        expected = [["T1", "ОРГ", [(8, 13)]], ["T2", "РІЗН", [(21, 27)]]]
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
+        self.assertEqual(expected, result["entities"])
+        self.assertEqual(self._get_sentences(result), ["Семпл з Токен.", "токен Другий"])
+        self.assertEqual(self._get_words(result), ["Семпл", "з", "Токен", ".", "токен", "Другий"])
+        self.assertEqual(self._get_entities(result), ["Токен", "Другий"])
 
 
-if __name__ == '__main__':
+    def test_complicated_realignment(self):
+        data: list[list[str]] = simple_tokenizer("""Така любов до скрипки у Романа Шмігельського змалку , бо де б не збиралися в свята односельці , завжди була музика , пісня .
+Тож співав усюди , а про музичний інструмент мріяв .
+Хоч і професію сільському хлопцеві вдалося здобути потрібну , і робота слюсаря пошанована , але залюбки співав і в церковному хорі , і в художній самодіяльності .
+Мабуть , за золоті руки й за чудовий тенор полюбила його пані Анна , з якою вони разом уже більш як півстоліття , і синів добрих виховали , які подарували їм онуків і правнука .
+
+Саме народження первістка Олексія спонукало пана Романа опанувати музичну грамоту .
+Але в той час вечірньої музичної школи не було , тож їздив до Калуша на приватні уроки , а згодом аж з Києва привіз бандуру .
+""")
+        bsf_markup: str = """T1 LOC 666 672 Калуша
+T2 LOC 707 712 Києва
+"""
+        expected = [["T1", "ЛОК", [(649, 655)]], ["T2", "ЛОК", [(689, 694)]]]
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
+        self.assertEqual(expected, result["entities"])
+        self.assertEqual(self._get_entities(result), ["Калуша", "Києва"])
+
+
+if __name__ == "__main__":
     unittest.main()
