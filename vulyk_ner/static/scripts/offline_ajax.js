@@ -167,7 +167,7 @@ var OfflineAjax = (function($, window, undefined) {
                                         },
                                         {
                                                 "attributes": [],
-                                                "bgColor": "#e5e8ea",
+                                                "bgColor": "#a2ff29",
                                                 "borderColor": "darken",
                                                 "children": [],
                                                 "fgColor": "black",
