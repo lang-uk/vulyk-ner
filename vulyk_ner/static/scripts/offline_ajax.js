@@ -40,9 +40,9 @@ var OfflineAjax = (function($, window, undefined) {
                                                 "children": [],
                                                 "fgColor": "black",
                                                 "labels": null,
-                                                "name": "ПЕРС",
+                                                "name": "PERS",
                                                 "normalizations": [],
-                                                "type": "ПЕРС",
+                                                "type": "PERS",
                                                 "unused": false
                                         },
                                         {
@@ -52,9 +52,9 @@ var OfflineAjax = (function($, window, undefined) {
                                                 "children": [],
                                                 "fgColor": "black",
                                                 "labels": null,
-                                                "name": "ОРГ",
+                                                "name": "ORG",
                                                 "normalizations": [],
-                                                "type": "ОРГ",
+                                                "type": "ORG",
                                                 "unused": false
                                         },
                                         {
@@ -64,9 +64,9 @@ var OfflineAjax = (function($, window, undefined) {
                                                 "children": [],
                                                 "fgColor": "black",
                                                 "labels": null,
-                                                "name": "ЛОК",
+                                                "name": "LOC",
                                                 "normalizations": [],
-                                                "type": "ЛОК",
+                                                "type": "LOC",
                                                 "unused": false
                                         },
                                         {
@@ -76,11 +76,72 @@ var OfflineAjax = (function($, window, undefined) {
                                                 "children": [],
                                                 "fgColor": "black",
                                                 "labels": null,
-                                                "name": "РІЗН",
+                                                "name": "MISC",
                                                 "normalizations": [],
-                                                "type": "РІЗН",
+                                                "type": "MISC",
+                                                "unused": false
+                                        },
+                                        {
+                                                "attributes": [],
+                                                "bgColor": "#00a651",
+                                                "borderColor": "darken",
+                                                "children": [],
+                                                "fgColor": "black",
+                                                "labels": null,
+                                                "name": "MON",
+                                                "normalizations": [],
+                                                "type": "MON",
+                                                "unused": false
+                                        },
+                                        {
+                                                "attributes": [],
+                                                "bgColor": "#fdb813",
+                                                "borderColor": "darken",
+                                                "children": [],
+                                                "fgColor": "black",
+                                                "labels": null,
+                                                "name": "PCT",
+                                                "normalizations": [],
+                                                "type": "PCT",
+                                                "unused": false
+                                        },
+                                        {
+                                                "attributes": [],
+                                                "bgColor": "#86346c",
+                                                "borderColor": "darken",
+                                                "children": [],
+                                                "fgColor": "white",
+                                                "labels": null,
+                                                "name": "DATE",
+                                                "normalizations": [],
+                                                "type": "DATE",
+                                                "unused": false
+                                        },
+                                        {
+                                                "attributes": [],
+                                                "bgColor": "#00aeef",
+                                                "borderColor": "darken",
+                                                "children": [],
+                                                "fgColor": "black",
+                                                "labels": null,
+                                                "name": "TIME",
+                                                "normalizations": [],
+                                                "type": "TIME",
+                                                "unused": false
+                                        },
+                                        {
+                                                "attributes": [],
+                                                "bgColor": "#ec008c",
+                                                "borderColor": "darken",
+                                                "children": [],
+                                                "fgColor": "white",
+                                                "labels": null,
+                                                "name": "ART",
+                                                "normalizations": [],
+                                                "type": "ART",
                                                 "unused": false
                                         }
+
                                 ],
                                 "event_attribute_types": [],
                                 "event_types": [],
