@@ -79,7 +79,6 @@ def parse_jsonlines(jsonl_file: pathlib.Path, output_dir: pathlib.Path) -> None:
     batch_dir: pathlib.Path = output_dir / input_file_base
     batch_dir.mkdir(exist_ok=True)
 
-
     with jsonl_file.open("r") as fp:
         for line_no, l in enumerate(fp):
             for answer in json.loads(l):
@@ -97,7 +96,7 @@ def parse_jsonlines(jsonl_file: pathlib.Path, output_dir: pathlib.Path) -> None:
                     user_dir: pathlib.Path = batch_dir / user
                     user_dir.mkdir(exist_ok=True)
 
-                    with open(user_dir / (answer['task']['id'] + ".iob"), "w") as fp_out:
+                    with open(user_dir / (answer["task"]["id"] + ".iob"), "w") as fp_out:
                         fp_out.write(iob)
 
 

@@ -194,7 +194,6 @@ def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str, compen
     :return: dict that can be directly converted to Vulyk json file
     """
 
-
     bsf: list[BsfInfo] = parse_bsf(bsf_markup)
     ents: list[list[Any]] = [[e.id, e.tag, [(e.start_idx, e.end_idx)]] for e in bsf]
 

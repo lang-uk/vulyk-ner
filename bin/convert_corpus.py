@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from codecs import open
 from copy import deepcopy
@@ -24,22 +23,16 @@ TEMPLATE = {
     "normalizations": [],
     "protocol": 1,
     "relations": [],
-    "sentence_offsets": [
-
-    ],
-    "source_files": [
-        "ann",
-        "txt"
-    ],
+    "sentence_offsets": [],
+    "source_files": ["ann", "txt"],
     "text": "",
-    "token_offsets": [
-    ],
-    "triggers": []
+    "token_offsets": [],
+    "triggers": [],
 }
 
 
 def parse_file(fname, content):
-    matches = re.findall("<S>(.*)<\/S>", content)
+    matches = re.findall(r"<S>(.*)<\/S>", content)
 
     text = []
     words = []
@@ -51,7 +44,7 @@ def parse_file(fname, content):
     res = deepcopy(TEMPLATE)
 
     for m in matches:
-        word_forms = re.findall("([^[]*)\[([^]]*)\]", m)
+        word_forms = re.findall(r"([^[]*)\[([^]]*)\]", m)
 
         sentence_begin = len("".join(text))
         for word, _ in word_forms:
@@ -63,7 +56,7 @@ def parse_file(fname, content):
 
             token_begin = len("".join(text))
             text.append(word)
-            if word and re.search(u"[а-яА-ЯєіїЄЇІ]", word) is not None:
+            if word and re.search("[а-яА-ЯєіїЄЇІ]", word) is not None:
                 word_count += 1
             token_end = len("".join(text))
 
@@ -89,15 +82,11 @@ def parse_file(fname, content):
     return res
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) < 3:
         exit("Not enough arguments")
 
     with open(sys.argv[2], "w", encoding="utf-8") as f_out:
         for f in glob(sys.argv[1]):
             with open(f, "r", encoding="utf-8") as fp:
-                f_out.write(
-                    json.dumps(
-                        parse_file(os.path.basename(f), fp.read()),
-                        ensure_ascii=False) +
-                    "\n")
+                f_out.write(json.dumps(parse_file(os.path.basename(f), fp.read()), ensure_ascii=False) + "\n")
