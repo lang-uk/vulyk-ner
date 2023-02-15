@@ -35,6 +35,33 @@ def convert_sentence(sentence: List[str], prefix_text: str = "речення: ",
         return prefix_text + final_sentence + "\n" + no_tags_text
 
 
+def convert_sentence_inline(sentence: List[str], prefix_text: str = "речення: ", annotation: str = "анотація: ") -> str:
+    tokens: List[str] = []
+    ner_tokens: List[str] = []
+
+    mapping = {
+        "B-PERS": "P",
+        "B-ORG": "O",
+        "B-MISC": "M",
+        "B-LOC": "L",
+        "I-PERS": "p",
+        "I-ORG": "o",
+        "I-MISC": "m",
+        "I-LOC": "l",
+        "O": "X",
+    }
+
+    for line in sentence:
+        w, tag = line.split(" ")
+        tokens.append(w)
+        ner_tokens.append(w)
+        ner_tokens.append("/" + mapping[tag])
+
+    final_sentence: str = "".join(map(str, reconstruct_tokenized([tokens])))
+    final_tagged_sentence: str = "".join(map(str, reconstruct_tokenized([ner_tokens])))
+    return prefix_text + final_sentence + "\n" + annotation + final_tagged_sentence
+
+
 if __name__ == "__main__":
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Convert fixed-split dataset (IOB) prepared for the training of classifiers to"
@@ -42,6 +69,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("infile", nargs="?", type=argparse.FileType("r"), default=sys.stdin)
+    parser.add_argument("--format", default="inline", choices=["inline", "post"])
     parser.add_argument("outfile", nargs="?", type=argparse.FileType("w"), default=sys.stdout)
 
     args: argparse.Namespace = parser.parse_args()
@@ -51,8 +79,10 @@ if __name__ == "__main__":
     for line in map(str.strip, args.infile):
         if not line.strip():
             if accum:
-                args.outfile.write(convert_sentence(accum) + "\n\n")
+                if args.format == "inline":
+                    args.outfile.write(convert_sentence_inline(accum) + "\n\n")
+                else:
+                    args.outfile.write(convert_sentence(accum) + "\n\n")
                 accum = []
         else:
             accum.append(line)
-
