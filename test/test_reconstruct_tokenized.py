@@ -1,5 +1,5 @@
 import unittest
-
+from typing import List, Tuple
 from bin.convert2vulyk import reconstruct_tokenized, AlignedToken
 
 
@@ -10,29 +10,29 @@ class TestReconstructTokenized(unittest.TestCase):
         self.assertEqual(expected, list(map(str, reconstruct_tokenized(data))))
 
     def test_simple_tokenized(self):
-        data: list[list[str]] = [["Мама", "мила", "раму"]]
+        data: List[List[str]] = [["Мама", "мила", "раму"]]
         self.assertEqual(["Мама", " ", "мила", " ", "раму"], list(map(str, reconstruct_tokenized(data))))
 
     def test_remove_spaces(self):
-        data: list[list[str]] = [["Мама", " ", "мила", " ", "раму "]]
+        data: List[List[str]] = [["Мама", " ", "мила", " ", "раму "]]
         self.assertEqual(["Мама", " ", "мила", " ", "раму"], list(map(str, reconstruct_tokenized(data))))
 
     def test_few_sentences(self):
-        data: list[list[str]] = [["Мама", "мила", "раму", "!"], ["рама", "була", "біла", "?"]]
+        data: List[List[str]] = [["Мама", "мила", "раму", "!"], ["рама", "була", "біла", "?"]]
         self.assertEqual(
             ["Мама", " ", "мила", " ", "раму", "!", "\n", "рама", " ", "була", " ", "біла", "?"],
             list(map(str, reconstruct_tokenized(data))),
         )
 
     def test_punctuation(self):
-        data: list[list[str]] = [["Мамо", ",", "навіщо", "!", "?"], ["Адже", ",", "рама", "була", "біла", "."]]
+        data: List[List[str]] = [["Мамо", ",", "навіщо", "!", "?"], ["Адже", ",", "рама", "була", "біла", "."]]
         self.assertEqual(
             ["Мамо", ",", " ", "навіщо", "!", "?", "\n", "Адже", ",", " ", "рама", " ", "була", " ", "біла", "."],
             list(map(str, reconstruct_tokenized(data))),
         )
 
     def test_quotes(self):
-        data: list[list[str]] = [
+        data: List[List[str]] = [
             ["Тендер", "“", "виграв", "”", "ТОВ", "«", "ЛАБЄАН-хісв", "»", "."],
             ["Сумна", "історія", ",", "малята", "."],
         ]
@@ -63,7 +63,7 @@ class TestReconstructTokenized(unittest.TestCase):
         )
 
     def test_brackets(self):
-        data: list[list[str]] = [
+        data: List[List[str]] = [
             ["Ой", "лишенько", "(", "[", "скільки", "ж", "тут", "дужок", "]", ")", ",", "це", "що", ",", "лісп", "?"],
         ]
 
@@ -97,15 +97,15 @@ class TestReconstructTokenized(unittest.TestCase):
             list(map(str, reconstruct_tokenized(data))),
         )
 
-    def _get_words(self, text: str, tokens: list[tuple[int, int]]) -> list[str]:
+    def _get_words(self, text: str, tokens: List[Tuple[int, int]]) -> List[str]:
         return [text[i1:i2] for (i1, i2) in tokens]
 
     def test_spaces_alignement(self):
-        data: list[list[str]] = [
+        data: List[List[str]] = [
             ["Цікаве", " ", "питання"],
         ]
 
-        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_tokens: List[AlignedToken] = list(reconstruct_tokenized(data))
         adjusted_text: str = "".join((map(str, adjusted_tokens)))
         whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
 
@@ -133,11 +133,11 @@ class TestReconstructTokenized(unittest.TestCase):
         )
 
     def test_simple_alignement(self):
-        data: list[list[str]] = [
+        data: List[List[str]] = [
             ["Цікаве", "питання ", " , ", " Мурзіку", "."],
         ]
 
-        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_tokens: List[AlignedToken] = list(reconstruct_tokenized(data))
         adjusted_text: str = "".join((map(str, adjusted_tokens)))
         whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
 
@@ -173,11 +173,11 @@ class TestReconstructTokenized(unittest.TestCase):
         )
 
     def test_hanging_spaces_alignement(self):
-        data: list[list[str]] = [
+        data: List[List[str]] = [
             [" ", " Цікаве ", "питання ", " , ", " Мурзіку", "."],
         ]
 
-        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_tokens: List[AlignedToken] = list(reconstruct_tokenized(data))
         adjusted_text: str = "".join((map(str, adjusted_tokens)))
         whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
 
@@ -213,12 +213,12 @@ class TestReconstructTokenized(unittest.TestCase):
         )
 
     def test_alignement(self):
-        data: list[list[str]] = [
+        data: List[List[str]] = [
             ["Цікаве", "питання", ", ", " ", "Мурзіку", "   ", "Васильовичу", "."],
             ["Будемо", " ", "полемізувати", " ."],
         ]
 
-        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_tokens: List[AlignedToken] = list(reconstruct_tokenized(data))
         adjusted_text: str = "".join((map(str, adjusted_tokens)))
         whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
 
@@ -269,9 +269,9 @@ class TestReconstructTokenized(unittest.TestCase):
         )
 
     def test_alignement_cornercase1(self):
-        data: list[list[str]] = [["Семпл  ", "з", "Токен", "."], ["токен", "Другий"]]
+        data: List[List[str]] = [["Семпл  ", "з", "Токен", "."], ["токен", "Другий"]]
 
-        adjusted_tokens: list[AlignedToken] = list(reconstruct_tokenized(data))
+        adjusted_tokens: List[AlignedToken] = list(reconstruct_tokenized(data))
         adjusted_text: str = "".join((map(str, adjusted_tokens)))
         whitespaced_text: str = "\n".join(" ".join(sent) for sent in data)
 
