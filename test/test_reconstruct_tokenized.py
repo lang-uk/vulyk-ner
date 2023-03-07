@@ -1,7 +1,6 @@
-import time
 import unittest
 
-from bin.convert2vulyk import reconstruct_tokenized
+from bin.convert2vulyk import reconstruct_tokenized, AlignedToken
 
 
 class TestReconstructTokenized(unittest.TestCase):
