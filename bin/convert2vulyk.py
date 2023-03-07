@@ -237,11 +237,16 @@ def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str, compen
     if compensate_for_offsets:
         for ent in ents:
             offset: int = 0
+            offset2: int = 0
             for disp in displacements:
+                # Here is your problem
                 if ent[2][0][0] >= disp[0]:
                     offset += disp[1]
 
-            ent[2][0] = (ent[2][0][0] - offset, ent[2][0][1] - offset)
+                if ent[2][0][1] >= disp[0]:
+                    offset2 += disp[1]
+
+            ent[2][0] = (ent[2][0][0] - offset, ent[2][0][1] - offset2)
 
     ts: int = int(time.time())
     vulyk: dict = {
@@ -292,6 +297,8 @@ def convert(input_files: str, fmt: str, ignore_annotations: bool, ann_autodiscov
         )
 
         vulyk_obj: dict = convert_bsf_2_vulyk(tokenized, markup, compensate_for_offsets=True)
+
+        # TODO: this should really return something instead of printing
         print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
 
 
