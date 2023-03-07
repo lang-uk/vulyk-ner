@@ -7,7 +7,7 @@ import re
 import time
 import glob
 import pathlib
-from typing import Any, Generator
+from typing import Any, Generator, List, Tuple
 from collections import namedtuple
 from enum import Enum
 from itertools import chain
@@ -83,7 +83,7 @@ class SpacyNER(AbstractNER):
         return brat_str
 
 
-def parse_bsf(bsf_data: str) -> list[BsfInfo]:
+def parse_bsf(bsf_data: str) -> List[BsfInfo]:
     """
     Convert multiline textual bsf representation to a list of named entities.
 
@@ -104,14 +104,14 @@ def parse_bsf(bsf_data: str) -> list[BsfInfo]:
     return result
 
 
-def simple_tokenizer(text: str) -> list[list[str]]:
+def simple_tokenizer(text: str) -> List[List[str]]:
     """
     Given whitespace/newline tokenized text, return the
     list of sentences (where each sentence is made of tokens)
     using whitespaces and newlines
     """
 
-    doc: list[list[str]] = []
+    doc: List[List[str]] = []
     if text:
         for s in text.split("\n"):
             doc.append(s.split(" "))
@@ -119,7 +119,7 @@ def simple_tokenizer(text: str) -> list[list[str]]:
     return doc
 
 
-def read_and_tokenize(text: str, fmt: str, tokenizer: TokenizationType) -> list[list[str]]:
+def read_and_tokenize(text: str, fmt: str, tokenizer: TokenizationType) -> List[List[str]]:
     if fmt == "json":
         assert tokenizer == TokenizationType.NOOP, "Json is meant to be already tokenized"
         return json.loads(text)
@@ -133,7 +133,7 @@ def read_and_tokenize(text: str, fmt: str, tokenizer: TokenizationType) -> list[
     return []  # Calm down, mypy
 
 
-def reconstruct_tokenized(tokenized_text: list[list[str]]) -> Generator[AlignedToken, None, None]:
+def reconstruct_tokenized(tokenized_text: List[List[str]]) -> Generator[AlignedToken, None, None]:
     """
     Accepts tokenized text [["sent1_word1", "sent1_word2"], ["sent2_word2"]]
     and normalizes spaces in the text according to the punctuation.
@@ -183,7 +183,7 @@ def reconstruct_tokenized(tokenized_text: list[list[str]]) -> Generator[AlignedT
             prev_token = w_stripped
 
 
-def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str, compensate_for_offsets: bool = False) -> dict:
+def convert_bsf_2_vulyk(tokenized_text: List[List[str]], bsf_markup: str, compensate_for_offsets: bool = False) -> dict:
     """
     Given tokenized text and named entities in Brat standoff format, generate object
     in the format compatible with Vulyk markup tool.
@@ -194,18 +194,18 @@ def convert_bsf_2_vulyk(tokenized_text: list[list[str]], bsf_markup: str, compen
     :return: dict that can be directly converted to Vulyk json file
     """
 
-    bsf: list[BsfInfo] = parse_bsf(bsf_markup)
-    ents: list[list[Any]] = [[e.id, e.tag, [(e.start_idx, e.end_idx)]] for e in bsf]
+    bsf: List[BsfInfo] = parse_bsf(bsf_markup)
+    ents: List[List[Any]] = [[e.id, e.tag, [(e.start_idx, e.end_idx)]] for e in bsf]
 
     idx: int = 0
     t_idx: int = 0
-    s_offsets: list[tuple[int, int]] = []
-    t_offsets: list[tuple[int, int]] = []
+    s_offsets: List[Tuple[int, int]] = []
+    t_offsets: List[Tuple[int, int]] = []
     text: str = ""
     s: str = ""
     prev_displacement: int = 0
 
-    displacements: list[tuple[int, int]] = []
+    displacements: List[Tuple[int, int]] = []
 
     for w in reconstruct_tokenized(tokenized_text):
         # Here we constructing a displacement map, i.e how we should adjust all the entities
@@ -292,7 +292,7 @@ def convert(input_files: str, fmt: str, ignore_annotations: bool, ann_autodiscov
             else:
                 markup = ann.read_text()
 
-        tokenized: list[list[str]] = read_and_tokenize(
+        tokenized: List[List[str]] = read_and_tokenize(
             text.read_text(), fmt, TokenizationType.NOOP if fmt == "json" else TokenizationType.WHITESPACE
         )
 
@@ -320,7 +320,7 @@ def tag(input_files: str, fmt: str, ner_framework: str, ner_model: str) -> None:
     for text in map(pathlib.Path, glob.glob(input_files)):
         log.info(f"Found text file {text}, tagging it")
 
-        tokenized: list[list[str]] = read_and_tokenize(
+        tokenized: List[List[str]] = read_and_tokenize(
             text.read_text(), fmt, TokenizationType.NOOP if fmt == "json" else TokenizationType.TOKENIZE_UK
         )
 
