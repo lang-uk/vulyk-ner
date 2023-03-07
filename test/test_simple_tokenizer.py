@@ -1,4 +1,3 @@
-import time
 import unittest
 
 from bin.convert2vulyk import simple_tokenizer

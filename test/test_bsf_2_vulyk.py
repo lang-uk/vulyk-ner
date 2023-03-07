@@ -1,5 +1,6 @@
 import time
 import unittest
+from typing import List, Tuple
 
 from bin.convert2vulyk import convert_bsf_2_vulyk, simple_tokenizer
 
@@ -29,14 +30,14 @@ class TestBsf2Vulyk(unittest.TestCase):
             "collection": "/",
         }
 
-    def _get_sentences(self, result: dict) -> list[str]:
+    def _get_sentences(self, result: dict) -> List[str]:
         return [result["text"][i1:i2] for (i1, i2) in result["sentence_offsets"]]
 
-    def _get_words(self, result: dict) -> list[str]:
+    def _get_words(self, result: dict) -> List[str]:
         return [result["text"][i1:i2] for (i1, i2) in result["token_offsets"]]
 
-    def _get_entities(self, result: dict) -> list[str]:
-        res: list[str] = []
+    def _get_entities(self, result: dict) -> List[str]:
+        res: List[str] = []
 
         for _, _, ent in result["entities"]:
             for i1, i2 in ent:
@@ -51,7 +52,7 @@ class TestBsf2Vulyk(unittest.TestCase):
         self.assertEqual(expected, convert_bsf_2_vulyk(data, bsf_markup))
 
     def test_no_ents(self):
-        data: list[list[str]] = [["Текст", "без", "сутностей"]]
+        data: List[List[str]] = [["Текст", "без", "сутностей"]]
         bsf_markup = ""
 
         result: dict = convert_bsf_2_vulyk(data, bsf_markup)
@@ -67,10 +68,10 @@ class TestBsf2Vulyk(unittest.TestCase):
         self.assertEqual([(0, 19)], result["sentence_offsets"])
 
     def test_tok_idx(self):
-        data: list[list[str]] = [["розпорядження", "землями", "\n", "в", "межах", ",", "визначених"]]
+        data: List[List[str]] = [["розпорядження", "землями", "\n", "в", "межах", ",", "визначених"]]
 
         bsf_markup: str = ""
-        tok_idx: list[tuple[int, int]] = [(0, 13), (14, 21), (22, 23), (24, 29), (29, 30), (31, 41)]
+        tok_idx: List[Tuple[int, int]] = [(0, 13), (14, 21), (22, 23), (24, 29), (29, 30), (31, 41)]
 
         result: dict = convert_bsf_2_vulyk(data, bsf_markup)
         self.assertEqual(tok_idx, result["token_offsets"])
@@ -82,10 +83,10 @@ class TestBsf2Vulyk(unittest.TestCase):
         self.assertEqual(result["text"], "розпорядження землями в межах, визначених")
 
     def test_sentence_offset(self):
-        data: list[list[str]] = [["Речення", "номер", "1", "."], ["Рядок", "другий"]]
+        data: List[List[str]] = [["Речення", "номер", "1", "."], ["Рядок", "другий"]]
 
         bsf_markup: str = ""
-        sent_idx: list[tuple[int, int]] = [(0, 16), (17, 29)]
+        sent_idx: List[Tuple[int, int]] = [(0, 16), (17, 29)]
         result: dict = convert_bsf_2_vulyk(data, bsf_markup)
         self.assertEqual(sent_idx, result["sentence_offsets"])
         self.assertEqual([], result["entities"])
@@ -93,7 +94,7 @@ class TestBsf2Vulyk(unittest.TestCase):
         self.assertEqual(self._get_words(result), ["Речення", "номер", "1", ".", "Рядок", "другий"])
 
     def test_entities_offset(self):
-        data: list[list[str]] = [["Речення", "з", "Токен", "."], ["токен", "Другий"]]
+        data: List[List[str]] = [["Речення", "з", "Токен", "."], ["токен", "Другий"]]
         bsf_markup: str = """T1 ORG 10 15 Токен
 T2 MISC 24 30 Другий"""
         expected = [["T1", "ORG", [(10, 15)]], ["T2", "MISC", [(23, 29)]]]
@@ -104,7 +105,7 @@ T2 MISC 24 30 Другий"""
         self.assertEqual(self._get_entities(result), ["Токен", "Другий"])
 
     def test_entities_alignement(self):
-        data: list[list[str]] = [["Семпл  ", "з", "Токен", "."], ["токен", "Другий"]]
+        data: List[List[str]] = [["Семпл  ", "з", "Токен", "."], ["токен", "Другий"]]
         bsf_markup: str = """T1 ORG 10 15 Токен
 T2 MISC 24 30 Другий"""
         expected = [["T1", "ORG", [(8, 13)]], ["T2", "MISC", [(21, 27)]]]
@@ -115,7 +116,7 @@ T2 MISC 24 30 Другий"""
         self.assertEqual(self._get_entities(result), ["Токен", "Другий"])
 
     def test_complicated_realignment(self):
-        data: list[list[str]] = simple_tokenizer(
+        data: List[List[str]] = simple_tokenizer(
             """Така любов до скрипки у Романа Шмігельського змалку , бо де б не збиралися в свята односельці , завжди була музика , пісня .
 Тож співав усюди , а про музичний інструмент мріяв .
 Хоч і професію сільському хлопцеві вдалося здобути потрібну , і робота слюсаря пошанована , але залюбки співав і в церковному хорі , і в художній самодіяльності .
@@ -134,7 +135,7 @@ T2 LOC 707 712 Києва
         self.assertEqual(self._get_entities(result), ["Калуша", "Києва"])
 
     def test_bug_no_1(self):
-        data: list[list[str]] = simple_tokenizer("""А . де Барі розробив а П . Ідоров запровадив.""")
+        data: List[List[str]] = simple_tokenizer("""А . де Барі розробив а П . Ідоров запровадив.""")
         bsf_markup: str = """T1 PERS 0 11 А . де Барі
 T2 PERS 23 33 П. Ідоров"""
         expected = [["T1", "PERS", [(0, 10)]], ["T2", "PERS", [(22, 31)]]]
@@ -143,7 +144,7 @@ T2 PERS 23 33 П. Ідоров"""
         self.assertEqual(self._get_entities(result), ["А. де Барі", "П. Ідоров"])
 
     def test_bug_no_2(self):
-        data: list[list[str]] = simple_tokenizer(
+        data: List[List[str]] = simple_tokenizer(
             "Окремо ставиться тема , з’явлена в розлогому "
             "заголовку вірша : « Про тих багатих людей , що вступають із світових розкошей в убоге й нищотне "
             "іноче життя , щоб не жаліли й не каялися по тому , не призапастивши на свої пожитки маєтка , "
