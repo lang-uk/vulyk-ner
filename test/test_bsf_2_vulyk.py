@@ -55,25 +55,40 @@ class TestBsf2Vulyk(unittest.TestCase):
         data: List[List[str]] = [["Текст", "без", "сутностей"]]
         bsf_markup = ""
 
-        result: dict = convert_bsf_2_vulyk(data, bsf_markup)
+        result: dict = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=False)
 
         self.assertEqual(result["text"], "Текст без сутностей")
-
         self.assertEqual([], result["entities"])
-
         self.assertEqual(self._get_sentences(result), ["Текст без сутностей"])
-
         self.assertEqual(self._get_words(result), ["Текст", "без", "сутностей"])
+        self.assertEqual([(0, 19)], result["sentence_offsets"])
 
+        result: dict = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
+
+        self.assertEqual(result["text"], "Текст без сутностей")
+        self.assertEqual([], result["entities"])
+        self.assertEqual(self._get_sentences(result), ["Текст без сутностей"])
+        self.assertEqual(self._get_words(result), ["Текст", "без", "сутностей"])
         self.assertEqual([(0, 19)], result["sentence_offsets"])
 
     def test_tok_idx(self):
+        # TODO: validate if we need to keep \n in the output texts
         data: List[List[str]] = [["розпорядження", "землями", "\n", "в", "межах", ",", "визначених"]]
 
         bsf_markup: str = ""
+
+        tok_idx: List[Tuple[int, int]] = [(0, 13), (14, 21), (24, 25), (26, 31), (32, 33), (34, 44)]
+
+        result: dict = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=False)
+        self.assertEqual(tok_idx, result["token_offsets"])
+
+        self.assertEqual(self._get_words(result), ["розпорядження", "землями", "в", "межах", ",", "визначених"])
+        self.assertEqual(self._get_sentences(result), ["розпорядження землями \n в межах , визначених"])
+        self.assertEqual(result["text"], "розпорядження землями \n в межах , визначених")
+
         tok_idx: List[Tuple[int, int]] = [(0, 13), (14, 21), (22, 23), (24, 29), (29, 30), (31, 41)]
 
-        result: dict = convert_bsf_2_vulyk(data, bsf_markup)
+        result: dict = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
         self.assertEqual(tok_idx, result["token_offsets"])
 
         self.assertEqual(self._get_words(result), ["розпорядження", "землями", "в", "межах", ",", "визначених"])
@@ -86,8 +101,15 @@ class TestBsf2Vulyk(unittest.TestCase):
         data: List[List[str]] = [["Речення", "номер", "1", "."], ["Рядок", "другий"]]
 
         bsf_markup: str = ""
+        sent_idx: List[Tuple[int, int]] = [(0, 17), (18, 30)]
+        result: dict = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=False)
+        self.assertEqual(sent_idx, result["sentence_offsets"])
+        self.assertEqual([], result["entities"])
+        self.assertEqual(self._get_sentences(result), ["Речення номер 1 .", "Рядок другий"])
+        self.assertEqual(self._get_words(result), ["Речення", "номер", "1", ".", "Рядок", "другий"])
+
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
         sent_idx: List[Tuple[int, int]] = [(0, 16), (17, 29)]
-        result: dict = convert_bsf_2_vulyk(data, bsf_markup)
         self.assertEqual(sent_idx, result["sentence_offsets"])
         self.assertEqual([], result["entities"])
         self.assertEqual(self._get_sentences(result), ["Речення номер 1.", "Рядок другий"])
@@ -135,9 +157,14 @@ T2 LOC 707 712 Києва
         self.assertEqual(self._get_entities(result), ["Калуша", "Києва"])
 
     def test_bug_no_1(self):
-        data: List[List[str]] = simple_tokenizer("""А . де Барі розробив а П . Ідоров запровадив.""")
+        data: List[List[str]] = simple_tokenizer("""А . де Барі розробив а П . Ідоров запровадив .""")
         bsf_markup: str = """T1 PERS 0 11 А . де Барі
 T2 PERS 23 33 П. Ідоров"""
+        expected = [["T1", "PERS", [(0, 11)]], ["T2", "PERS", [(23, 33)]]]
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=False)
+        self.assertEqual(expected, result["entities"])
+        self.assertEqual(self._get_entities(result), ["А . де Барі", "П . Ідоров"])
+
         expected = [["T1", "PERS", [(0, 10)]], ["T2", "PERS", [(22, 31)]]]
         result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
         self.assertEqual(expected, result["entities"])
@@ -156,6 +183,19 @@ T2 PERS 23 33 П. Ідоров"""
             "нищотне іноче життя, щоб не жаліли й не каялися по тому, не призапастивши на свої пожитки "
             "маєтка, тобто речей, їжі та пиття. А передусім грошей, оскільки без маєтку в монастирях важко, "
             "особливо тим, що раніше мали багатство"
+        )
+
+        expected = [["T1", "MISC", [(65, 364)]]]
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=False)
+        self.assertEqual(expected, result["entities"])
+        self.assertEqual(
+            self._get_entities(result),
+            [
+                "Про тих багатих людей , що вступають із світових розкошей в убоге й нищотне "
+                "іноче життя , щоб не жаліли й не каялися по тому , не призапастивши на свої пожитки маєтка , "
+                "тобто речей , їжі та пиття . А передусім грошей , оскільки без маєтку в монастирях важко , особливо "
+                "тим , що раніше мали багатство"
+            ],
         )
 
         expected = [["T1", "MISC", [(62, 352)]]]

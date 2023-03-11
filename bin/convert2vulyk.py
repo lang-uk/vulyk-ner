@@ -207,34 +207,34 @@ def convert_bsf_2_vulyk(tokenized_text: List[List[str]], bsf_markup: str, compen
 
     displacements: List[Tuple[int, int]] = []
 
-    for w in reconstruct_tokenized(tokenized_text):
-        # Here we constructing a displacement map, i.e how we should adjust all the entities
-        # after original tokens were displaced according to space normalization.
-        if w.orig_pos[0] > w.new_pos[0]:
-            if w.orig_pos[0] - w.new_pos[0] > prev_displacement:
-                displacements.append((w.orig_pos[0], w.orig_pos[0] - w.new_pos[0] - prev_displacement))
-                prev_displacement = w.orig_pos[0] - w.new_pos[0]
-
-        if w.token == "\n":
-            if s:
-                s_offsets.append((idx, idx + len(s)))
-
-            idx += len(s) + 1
-            s = ""
-        else:
-            s += w.token
-
-        text += w.token
-
-        if w.token not in [" ", "\n"]:
-            t_offsets.append((t_idx, t_idx + len(w.token)))
-
-        t_idx += len(w.token)
-
-    if s:
-        s_offsets.append((idx, idx + len(s)))
-
     if compensate_for_offsets:
+        for w in reconstruct_tokenized(tokenized_text):
+            # Here we constructing a displacement map, i.e how we should adjust all the entities
+            # after original tokens were displaced according to space normalization.
+            if w.orig_pos[0] > w.new_pos[0]:
+                if w.orig_pos[0] - w.new_pos[0] > prev_displacement:
+                    displacements.append((w.orig_pos[0], w.orig_pos[0] - w.new_pos[0] - prev_displacement))
+                    prev_displacement = w.orig_pos[0] - w.new_pos[0]
+
+            if w.token == "\n":
+                if s:
+                    s_offsets.append((idx, idx + len(s)))
+
+                idx += len(s) + 1
+                s = ""
+            else:
+                s += w.token
+
+            text += w.token
+
+            if w.token not in [" ", "\n"]:
+                t_offsets.append((t_idx, t_idx + len(w.token)))
+
+            t_idx += len(w.token)
+
+        if s:
+            s_offsets.append((idx, idx + len(s)))
+
         for ent in ents:
             offset: int = 0
             offset2: int = 0
@@ -247,6 +247,23 @@ def convert_bsf_2_vulyk(tokenized_text: List[List[str]], bsf_markup: str, compen
                     offset2 += disp[1]
 
             ent[2][0] = (ent[2][0][0] - offset, ent[2][0][1] - offset2)
+    else:
+        for sentence in tokenized_text:
+            s = ""
+            t_idx = len(text)
+            for token in sentence:
+                if token.strip():
+                    t_offsets.append((t_idx, t_idx + len(token)))
+                t_idx += len(token) + 1
+
+            s = " ".join(sentence)
+
+            if s:
+                s_offsets.append((len(text), len(text) + len(s)))
+
+            text += s + "\n"
+
+        text = text.strip()
 
     ts: int = int(time.time())
     vulyk: dict = {
@@ -275,7 +292,11 @@ def convert_bsf_2_vulyk(tokenized_text: List[List[str]], bsf_markup: str, compen
     return vulyk
 
 
-def convert(input_files: str, fmt: str, ignore_annotations: bool, ann_autodiscovery: str) -> None:
+def convert(input_files: str, fmt: str, ignore_annotations: bool, ann_autodiscovery: str, realign_tokens: bool) -> None:
+    """
+    realign_tokens=True means to apply the typography rules to the tokenized input and move NER tokens accordingly
+    i.e remove spaces before periods and commas, etc.
+    """
     for text in map(pathlib.Path, glob.glob(input_files)):
         log.info(f"Found text file {text}, parsing it")
 
@@ -296,7 +317,7 @@ def convert(input_files: str, fmt: str, ignore_annotations: bool, ann_autodiscov
             text.read_text(), fmt, TokenizationType.NOOP if fmt == "json" else TokenizationType.WHITESPACE
         )
 
-        vulyk_obj: dict = convert_bsf_2_vulyk(tokenized, markup, compensate_for_offsets=True)
+        vulyk_obj: dict = convert_bsf_2_vulyk(tokenized, markup, compensate_for_offsets=realign_tokens)
 
         # TODO: this should really return something instead of printing
         print(json.dumps(vulyk_obj, ensure_ascii=False, sort_keys=True))
@@ -308,6 +329,7 @@ def convert_command(args: argparse.Namespace) -> None:
         fmt=args.format,
         ignore_annotations=args.ignore_annotations,
         ann_autodiscovery=args.ann_autodiscovery,
+        realign_tokens=args.realign_tokens,
     )
 
 
@@ -366,6 +388,10 @@ if __name__ == "__main__":
     )
     convert_parser.add_argument(
         "--ignore_annotations", default=False, action="store_true", help="Do not try to load *.ann files"
+    )
+    convert_parser.add_argument(
+        "--realign_tokens", default=False, action="store_true", help="Apply the typography rules to the input texts "
+        "and align annotated tokens accordingly"
     )
 
     tag_parser: argparse.ArgumentParser = subparsers.add_parser(
