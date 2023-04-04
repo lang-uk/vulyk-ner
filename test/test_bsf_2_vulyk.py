@@ -211,6 +211,19 @@ T2 PERS 23 33 П. Ідоров"""
             ],
         )
 
+    def test_bug_with_leading_newline(self):
+        data: List[List[str]] = simple_tokenizer("""
+Долучилися до заходу заступник голови райдержадміністрації Сергій Білецький , начальник управління фінансів Тамара Матяш , начальник відділу освіти Микола Каськів , директори загальноосвітніх шкіл I-III ступенів , опорних шкіл та навчально-виховних об’єднань .
+""")
+        bsf_markup: str = """T1	PERS 60 76	Сергій Білецький"""
+        expected = [["T1", "PERS", [(60, 76)]]]
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=False)
+        self.assertEqual(expected, result["entities"])
+        self.assertEqual(self._get_entities(result), ["Сергій Білецький"])
+
+        result = convert_bsf_2_vulyk(data, bsf_markup, compensate_for_offsets=True)
+        self.assertEqual(expected, result["entities"])
+        self.assertEqual(self._get_entities(result), ["Сергій Білецький"])
 
 if __name__ == "__main__":
     unittest.main()

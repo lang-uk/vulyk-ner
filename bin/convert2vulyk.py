@@ -32,20 +32,32 @@ class AlignedToken(namedtuple("AlignedToken", ("token", "orig_pos", "new_pos")))
 
 
 class TokenizationType(Enum):
+    """
+    Tokenization type
+    """
     NOOP = 1
     WHITESPACE = 2
     TOKENIZE_UK = 3
 
 
 class AbstractNER:
+    """
+    Abstract class for NER
+    """
     def __init__(self, model: str) -> None:
         raise NotImplementedError()
 
     def tag_text(self, txt: str) -> str:
+        """
+        Tag text with NER model and return brat format
+        """
         raise NotImplementedError()
 
 
 class StanzaNER(AbstractNER):
+    """
+    NER using Stanza library
+    """
     def __init__(self, model: str) -> None:
         import stanza  # type: ignore
 
@@ -55,6 +67,9 @@ class StanzaNER(AbstractNER):
         self.ner = stanza.Pipeline(lang=model, processors="tokenize,mwt,ner", tokenize_pretokenized="true")
 
     def tag_text(self, txt: str) -> str:
+        """
+        Tag with stanza model and convert Stanza NER output to brat format
+        """
         doc = self.ner(txt)
 
         brat_str: str = ""
@@ -66,12 +81,18 @@ class StanzaNER(AbstractNER):
 
 
 class SpacyNER(AbstractNER):
+    """
+    NER using Spacy library
+    """
     def __init__(self, model: str) -> None:
         import spacy
 
         self.ner = spacy.load(model)
 
     def tag_text(self, txt: str) -> str:
+        """
+        Tag with spacy model and convert Spacy NER output to brat format
+        """
         doc = self.ner(txt)
 
         brat_str: str = ""
@@ -263,7 +284,7 @@ def convert_bsf_2_vulyk(tokenized_text: List[List[str]], bsf_markup: str, compen
 
             text += s + "\n"
 
-        text = text.strip()
+        text = text.rstrip()
 
     ts: int = int(time.time())
     vulyk: dict = {
